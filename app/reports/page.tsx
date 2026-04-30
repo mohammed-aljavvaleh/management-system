@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { ReportsClient } from "@/components/reports/reports-clients";
+import { ReportsClient } from "@/components/reports/reports-client";
 
 export default async function ReportsPage() {
   // Default: last 7 days
