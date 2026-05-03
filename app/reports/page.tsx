@@ -28,7 +28,7 @@ export default async function ReportsPage() {
       byDay[key].cancelled++;
     } else {
       byDay[key].count++;
-      byDay[key].revenue += a.service.price;
+      byDay[key].revenue += a.priceAtBooking;
     }
   }
 
@@ -39,7 +39,7 @@ export default async function ReportsPage() {
     const sid = a.serviceId;
     if (!serviceMap[sid]) serviceMap[sid] = { name: a.service.name, count: 0, revenue: 0 };
     serviceMap[sid].count++;
-    serviceMap[sid].revenue += a.service.price;
+    serviceMap[sid].revenue += a.priceAtBooking;
   }
 
   // Staff performance
@@ -49,11 +49,11 @@ export default async function ReportsPage() {
     const stid = a.staffId;
     if (!staffMap[stid]) staffMap[stid] = { name: a.staff.name, count: 0, revenue: 0 };
     staffMap[stid].count++;
-    staffMap[stid].revenue += a.service.price;
+    staffMap[stid].revenue += a.priceAtBooking;
   }
 
   const nonCancelled = appointments.filter((a) => a.status !== "CANCELLED");
-  const totalRevenue = nonCancelled.reduce((s, a) => s + a.service.price, 0);
+  const totalRevenue = nonCancelled.reduce((s, a) => s + a.priceAtBooking, 0);
   const cancelled = appointments.filter((a) => a.status === "CANCELLED").length;
   const completed = appointments.filter((a) => a.status === "COMPLETED").length;
 

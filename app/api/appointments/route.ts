@@ -41,6 +41,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    const service = await prisma.service.findUnique({ where: { id: serviceId } });
+    if (!service) {
+      return NextResponse.json({ error: "Service not found" }, { status: 404 });
+    }
+
     const appointment = await prisma.appointment.create({
       data: {
         customerName,
@@ -49,6 +54,7 @@ export async function POST(req: NextRequest) {
         serviceId,
         staffId,
         status: "SCHEDULED",
+        priceAtBooking: service.price,
       },
       include: { service: true, staff: true },
     });

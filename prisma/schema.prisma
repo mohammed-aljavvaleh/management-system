@@ -37,6 +37,7 @@ model Appointment {
   
   serviceId   String
   service     Service  @relation(fields: [serviceId], references: [id])
+  priceAtBooking Float
   
   staffId     String
   staff       Staff    @relation(fields: [staffId], references: [id])
