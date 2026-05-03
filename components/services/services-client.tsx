@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Clock, DollarSign, X, Check, Scissors, TurkishLira } from "lucide-react";
+import { Plus, Pencil, Trash2, Clock, X, Check, Scissors, TurkishLira } from "lucide-react";
 import { useLang } from "@/components/providers/language-provider";
 
 type Service = { id: string; name: string; price: number; duration: number };

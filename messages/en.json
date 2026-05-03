@@ -65,15 +65,17 @@
     "fullName": "Full Name *",
     "fullNamePlaceholder": "e.g. Sarah Johnson",
     "phoneNumber": "Phone Number",
-    "phonePlaceholder": "+1 555 000 0000 (optional)",
+    "validNumber": "✓ Valid phone number",
+    "phonePlaceholder": "+1 555 000 0000",
+    "phoneNumberRules": "Must start with 05 · exactly 11 digits",
     "serviceStaff": "Service & Staff",
-    "service": "Service *",
+    "service": "Service*",
     "noServices": "No services available",
     "staffMember": "Staff Member *",
     "noStaff": "No staff available",
     "dateTime": "Date & Time",
-    "date": "Date *",
-    "timeSlot": "Time Slot *",
+    "date": "Date*",
+    "timeSlot": "Time Slot*",
     "summary": "Summary",
     "summaryCustomer": "Customer",
     "summaryService": "Service",
@@ -84,7 +86,11 @@
     "total": "Total",
     "schedule": "Schedule Appointment",
     "scheduling": "Scheduling...",
+    "at": "at",
     "errors": {
+      "phoneRequired": "Phone number is required",
+      "phoneMustStart": "Phone number must start with 05",
+      "PhoneTooShort": "Phone number must be exactly 11 digits",
       "nameRequired": "Customer name is required",
       "serviceRequired": "Please select a service",
       "staffRequired": "Please select a staff member",
@@ -174,5 +180,16 @@
     "thursday": "Thu",
     "friday": "Fri",
     "saturday": "Sat"
-  }
+  },
+  "months": {
+    "january": "January", "february": "February", "march": "March",
+    "april": "April", "may": "May", "june": "June", "july": "July",
+    "august": "August", "september": "September", "october": "October",
+    "november": "November", "december": "December"
+},
+  "fullDays": {
+    "sunday": "Sunday", "monday": "Monday", "tuesday": "Tuesday",
+    "wednesday": "Wednesday", "thursday": "Thursday", "friday": "Friday",
+    "saturday": "Saturday"
+}
 }

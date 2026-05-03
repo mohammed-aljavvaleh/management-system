@@ -5,7 +5,6 @@ import { format } from "date-fns";
 import { TrendingUp, CalendarDays, XCircle, CheckCircle, BarChart2, TurkishLira} from "lucide-react";
 import { useLang } from "@/components/providers/language-provider";
 import { Appointment } from "@/app/generated/prisma";
-import { babelIncludeRegexes } from "next/dist/build/webpack-config";
 
 type DayData = { date: string; count: number; revenue: number; cancelled: number; completed: number };
 type ServiceStat = { name: string; count: number; revenue: number };
@@ -115,6 +114,8 @@ export function ReportsClient({
           <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 140 }}>
             {dailyData.map((day) => {
               const pct = (day.revenue / maxRevenue) * 100;
+              const dayIndex = new Date(day.date + "T12:00:00").getDay();
+              const dayLabel = [t.weekDays.sunday, t.weekDays.monday, t.weekDays.tuesday, t.weekDays.wedensday, t.weekDays.thursday, t.weekDays.friday, t.weekDays.saturday][dayIndex];
               return (
                 <div key={day.date} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                   <div style={{ fontSize: 10, color: "var(--muted-foreground)", height: 16 }}>
@@ -132,7 +133,7 @@ export function ReportsClient({
                     }}
                   />
                   <div style={{ fontSize: 10, color: "var(--muted-foreground)", textAlign: "center" }}>
-                    {format(new Date(day.date + "T12:00:00"), "EEE")}
+                    {dayLabel}
                   </div>
                 </div>
               );
@@ -149,6 +150,8 @@ export function ReportsClient({
             {dailyData.map((day) => {
               const pct = (day.count / maxCount) * 100;
               const cancelPct = day.cancelled > 0 ? (day.cancelled / (day.count + day.cancelled)) * 100 : 0;
+              const dayIndex = new Date(day.date + "T12:00:00").getDay();
+              const dayLabel = [t.weekDays.sunday, t.weekDays.monday, t.weekDays.tuesday, t.weekDays.wedensday, t.weekDays.thursday, t.weekDays.friday, t.weekDays.saturday][dayIndex];
               return (
                 <div key={day.date} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                   <div style={{ fontSize: 10, color: "var(--muted-foreground)", height: 16 }}>
@@ -170,7 +173,7 @@ export function ReportsClient({
                     />
                   </div>
                   <div style={{ fontSize: 10, color: "var(--muted-foreground)", textAlign: "center" }}>
-                    {format(new Date(day.date + "T12:00:00"), "EEE")}
+                    {dayLabel}
                   </div>
                 </div>
               );

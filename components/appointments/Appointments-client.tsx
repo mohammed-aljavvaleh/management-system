@@ -32,6 +32,20 @@ type View = "calendar" | "list";
 export function AppointmentsClient({ initialAppointments, services, staff }: Props) {
   const router = useRouter();
   const { t } = useLang();
+
+  // Translated month names (index 0–11)
+  const MONTHS = [
+    t.months.january, t.months.february, t.months.march, t.months.april,
+    t.months.may, t.months.june, t.months.july, t.months.august,
+    t.months.september, t.months.october, t.months.november, t.months.december,
+  ];
+
+  // Translated full day names (index 0=Sun … 6=Sat)
+  const FULL_DAYS = [
+    t.fullDays.sunday, t.fullDays.monday, t.fullDays.tuesday, t.fullDays.wednesday,
+    t.fullDays.thursday, t.fullDays.friday, t.fullDays.saturday,
+  ];
+
   const [appointments, setAppointments] = useState(initialAppointments);
   const [view, setView] = useState<View>("calendar");
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -102,6 +116,11 @@ export function AppointmentsClient({ initialAppointments, services, staff }: Pro
     }
   }
 
+  const viewLabels: Record<View, string> = {
+    calendar: t.appointments.calendar,
+    list: t.appointments.list,
+  };
+
   return (
     <div style={{ padding: "32px 36px" }}>
       {/* Header */}
@@ -132,7 +151,7 @@ export function AppointmentsClient({ initialAppointments, services, staff }: Pro
                 }}
               >
                 {v === "calendar" ? <Calendar size={14}  />  : <List size={14} />}
-                {v.charAt(0).toUpperCase() + v.slice(1)}
+                {viewLabels[v]}
               </button>
             ))}
           </div>
@@ -162,7 +181,7 @@ export function AppointmentsClient({ initialAppointments, services, staff }: Pro
           <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <h2 style={{ fontFamily: "var(--font-display)", fontSize: 18 }}>
-                {format(currentMonth, "MMMM yyyy")}
+                {MONTHS[currentMonth.getMonth()]} {currentMonth.getFullYear()}
               </h2>
               <div style={{ display: "flex", gap: 4 }}>
                 <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} style={navBtnStyle}>
@@ -238,10 +257,12 @@ export function AppointmentsClient({ initialAppointments, services, staff }: Pro
           <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
             <div style={{ padding: "16px 18px", borderBottom: "1px solid var(--border)" }}>
               <h3 style={{ fontFamily: "var(--font-display)", fontSize: 17 }}>
-                {selectedDate ? format(selectedDate, "EEEE, MMMM d") : t.appointments.selectDate}
+                {selectedDate
+                  ? `${FULL_DAYS[selectedDate.getDay()]}, ${MONTHS[selectedDate.getMonth()]} ${selectedDate.getDate()}`
+                  : t.appointments.selectDate}
               </h3>
               <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>
-                {selectedDayAppts.length} {t.appointments.appointment} {selectedDayAppts.length !== 1}
+                {selectedDayAppts.length} {selectedDayAppts.length === 1 ? t.appointments.appointment : t.appointments.appointments}
               </p>
             </div>
             <div style={{ overflowY: "auto", maxHeight: 500 }}>
@@ -332,7 +353,7 @@ export function AppointmentsClient({ initialAppointments, services, staff }: Pro
                   <span>{appt.service.name}</span>
                   <span>{appt.staff.name}</span>
                   <span style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--muted-foreground)", fontSize: 12.5 }}>
-                    <Clock size={12} />{appt.service.duration} {t.services.min}
+                    <Clock size={12} />{appt.service.duration}{t.services.min}
                   </span>
                   <span style={{ color: "var(--primary)", fontWeight: 500 }}>₺{appt.service.price}</span>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -383,6 +404,14 @@ function AppointmentCard({
   loading: boolean;
   compact?: boolean;
 }) {
+    const { t } = useLang();
+ 
+  const statusLabel: Record<string, string> = {
+    SCHEDULED: t.appointments.statuses.scheduled,
+    COMPLETED: t.appointments.statuses.completed,
+    CANCELLED: t.appointments.statuses.cancelled,
+  };
+
   return (
     <div
       style={{
@@ -402,7 +431,7 @@ function AppointmentCard({
           className={`status-${appt.status.toLowerCase()}`}
           style={{ padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 500 }}
         >
-          {appt.status.toLowerCase()}
+          {statusLabel[appt.status] ?? appt.status.toLowerCase()}
         </span>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -413,13 +442,13 @@ function AppointmentCard({
                 onClick={() => onStatusChange(appt.id, "COMPLETED")}
                 style={{ ...smallBtnStyle, color: "#2d7a2d", background: "#e8f5e8" }}
               >
-                complete
+                {t.appointments.complete}
               </button>
               <button
                 onClick={() => onStatusChange(appt.id, "CANCELLED")}
                 style={{ ...smallBtnStyle, color: "#a01a1a", background: "#fde8e8" }}
               >
-                Cancel
+                {t.common.cancel}
               </button>
             </>
           )}

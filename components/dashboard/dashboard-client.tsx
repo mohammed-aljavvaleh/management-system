@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { CalendarDays, DollarSign, Clock, Users, Scissors, TrendingUp } from "lucide-react";
+import { CalendarDays, TurkishLira, Clock, Users, Scissors, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useLang } from "@/components/providers/language-provider";
 
@@ -39,8 +39,8 @@ export function DashboardClient({
   const stats = [
     {
       label: t.dashboard.todayRevenue,
-      value: `$${todayRevenue.toFixed(2)}`,
-      icon: DollarSign,
+      value: `₺${todayRevenue.toFixed(2)}`,
+      icon: TurkishLira,
       sub: `${todayAppointments.length} ${t.dashboard.appointments}`,
       color: "#c9956b",
     },
@@ -231,11 +231,11 @@ export function DashboardClient({
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--muted-foreground)", fontSize: 12 }}>
-                  <Clock size={12} />{appt.service.duration}m
+                  <Clock size={12} />{appt.service.duration}{t.services.min}
                 </div>
 
                 <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--primary)", width: 60, textAlign: "right" }}>
-                  ${appt.service.price}
+                  ₺{appt.service.price}
                 </div>
 
                 <span

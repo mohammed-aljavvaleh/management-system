@@ -62,18 +62,20 @@
     "subtitle": "Randevu oluşturmak için bilgileri doldurun",
     "back": "Randevulara Dön",
     "customerInfo": "Müşteri Bilgileri",
-    "fullName": "Ad Soyad *",
+    "fullName": "Ad Soyad*",
     "fullNamePlaceholder": "örn. Ayşe Kaya",
-    "phoneNumber": "Telefon Numarası",
+    "phoneNumber": "Telefon Numarası*",
+    "validNumber": "✓ Geçerli telefon numarası",
     "phonePlaceholder": "+90 555 000 0000 (isteğe bağlı)",
+    "phoneNumberRules": "05 ile başlamalı · tam 11 rakamdan oluşmalı",
     "serviceStaff": "Hizmet ve Personel",
-    "service": "Hizmet *",
+    "service": "Hizmet*",
     "noServices": "Hizmet bulunamadı",
-    "staffMember": "Personel *",
+    "staffMember": "Personel*",
     "noStaff": "Personel bulunamadı",
     "dateTime": "Tarih ve Saat",
     "date": "Tarih *",
-    "timeSlot": "Saat Dilimi *",
+    "timeSlot": "Saat Dilimi*",
     "summary": "Özet",
     "summaryCustomer": "Müşteri",
     "summaryService": "Hizmet",
@@ -84,7 +86,11 @@
     "total": "Toplam",
     "schedule": "Randevuyu Kaydet",
     "scheduling": "Kaydediliyor...",
+    "at": "saat",
     "errors": {
+      "phoneRequired": "Telefon numarası gerekli",
+      "phoneMustStart": "Telefon numarası 05 ile başlamalıdır.",
+      "PhoneTooShort": "Telefon numarası tam 11 rakamdan oluşmalıdır.",
       "nameRequired": "Müşteri adı zorunludur",
       "serviceRequired": "Lütfen bir hizmet seçin",
       "staffRequired": "Lütfen bir personel seçin",
@@ -174,5 +180,16 @@
     "thursday": "Per",
     "friday": "Cum",
     "saturday": "Cmt"
-  }
-}
+  },
+  "months": {
+    "january": "Ocak", "february": "Şubat", "march": "Mart",
+    "april": "Nisan", "may": "Mayıs", "june": "Haziran", "july": "Temmuz",
+    "august": "Ağustos", "september": "Eylül", "october": "Ekim",
+    "november": "Kasım", "december": "Aralık"
+ },
+ "fullDays": {
+    "sunday": "Pazar", "monday": "Pazartesi", "tuesday": "Salı",
+    "wednesday": "Çarşamba", "thursday": "Perşembe", "friday": "Cuma",
+    "saturday": "Cumartesi"
+ } 
+} 

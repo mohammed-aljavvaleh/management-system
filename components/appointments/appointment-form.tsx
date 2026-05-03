@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { format, addDays } from "date-fns";
-import { ArrowLeft, Clock, DollarSign, User, Phone, Calendar } from "lucide-react";
+import { ArrowLeft, Clock, TurkishLira, User, Phone, Calendar } from "lucide-react";
 import Link from "next/link";
 import { useLang } from "@/components/providers/language-provider";
 
@@ -25,6 +25,13 @@ const TIME_SLOTS = [
 export function AppointmentForm({ services, staff }: Props) {
   const router = useRouter();
   const { t } = useLang();
+
+  // Translated month names (index 0–11)
+  const MONTHS = [
+    t.months.january, t.months.february, t.months.march, t.months.april,
+    t.months.may, t.months.june, t.months.july, t.months.august,
+    t.months.september, t.months.october, t.months.november, t.months.december,
+  ];
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [phoneError, setPhoneError] = useState("");
@@ -38,30 +45,32 @@ export function AppointmentForm({ services, staff }: Props) {
 
   const selectedService = services.find((s) => s.id === serviceId);
 
-   // Phone: digits only, must start with 05, exactly 11 digits
   function handlePhoneChange(value: string) {
     const digits = value.replace(/\D/g, "").slice(0, 11);
     setCustomerPhone(digits);
  
     if (digits.length === 0) {
-      setPhoneError("");
+      setPhoneError(t.appointmentForm.errors.phoneRequired);
     } else if (!digits.startsWith("05")) {
-      setPhoneError("Phone number must start with 05");
+      setPhoneError(t.appointmentForm.errors.phoneMustStart);
     } else if (digits.length < 11) {
-      setPhoneError(`${digits.length}/11 digits — must be exactly 11`);
+      setPhoneError(`${digits.length}/11 — ${t.appointmentForm.errors.PhoneTooShort}`);
     } else {
       setPhoneError("");
     }
   }
  
   function validatePhone(): boolean {
-    if (customerPhone.length === 0) return true; // optional
+    if (customerPhone.length === 0) {
+      setPhoneError(t.appointmentForm.errors.phoneRequired);
+      return false;
+    }
     if (!customerPhone.startsWith("05")) {
-      setPhoneError("Phone number must start with 05");
+      setPhoneError(t.appointmentForm.errors.phoneMustStart);
       return false;
     }
     if (customerPhone.length !== 11) {
-      setPhoneError("Phone number must be exactly 11 digits");
+      setPhoneError(t.appointmentForm.errors.PhoneTooShort);
       return false;
     }
     return true;
@@ -170,8 +179,8 @@ export function AppointmentForm({ services, staff }: Props) {
                     {phoneError
                       ? phoneError
                       : customerPhone.length === 11
-                      ? "✓ Valid phone number"
-                      : "Must start with 05 · exactly 11 digits"}
+                      ? t.appointmentForm.validNumber
+                      : t.appointmentForm.phoneNumberRules}
                   </span>
                   <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>
                     {customerPhone.length}/11
@@ -184,7 +193,7 @@ export function AppointmentForm({ services, staff }: Props) {
           {/* Service Selection */}
           <section style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, padding: "22px 24px" }}>
             <h2 style={{ fontFamily: "var(--font-display)", fontSize: 17, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-              <DollarSign size={15} color="var(--primary)" /> {t.appointmentForm.service}
+              <TurkishLira size={15} color="var(--primary)" /> {t.appointmentForm.service}
             </h2>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {services.map((svc) => (
@@ -206,9 +215,9 @@ export function AppointmentForm({ services, staff }: Props) {
                   </div>
                   <div style={{ display: "flex", gap: 12, fontSize: 12, color: "var(--muted-foreground)" }}>
                     <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                      <Clock size={11} /> {svc.duration} min
+                      <Clock size={11} /> {svc.duration}{t.services.min}
                     </span>
-                    <span style={{ color: "var(--primary)", fontWeight: 500 }}>${svc.price}</span>
+                    <span style={{ color: "var(--primary)", fontWeight: 500 }}>₺{svc.price}</span>
                   </div>
                 </button>
               ))}
@@ -302,10 +311,14 @@ export function AppointmentForm({ services, staff }: Props) {
               alignItems: "center",
             }}>
               <span>
-                <strong>{selectedService.name}</strong> · {selectedService.duration} min
-                {date && time && ` · ${format(new Date(`${date}T${time}:00`), "MMM d 'at' h:mm a")}`}
+                <strong>{selectedService.name}</strong> · {selectedService.duration}{t.services.min}
+                {date && time && (() => {
+                  const d = new Date(`${date}T${time}:00`);
+                  const hhmm = formatTime(time);
+                  return ` · ${MONTHS[d.getMonth()]} ${d.getDate()} ${t.appointmentForm.at} ${hhmm}`;
+                })()}
               </span>
-              <span style={{ fontWeight: 600, fontSize: 16 }}>${selectedService.price}</span>
+              <span style={{ fontWeight: 600, fontSize: 16 }}>₺{selectedService.price}</span>
             </div>
           )}
  
