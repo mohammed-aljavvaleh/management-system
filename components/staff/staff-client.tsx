@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Pencil, Trash2, X, Users, CalendarDays, DollarSign } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Users, CalendarDays, TurkishLira } from "lucide-react";
 import { useLang } from "@/components/providers/language-provider";
 
 type StaffMember = {
@@ -134,7 +134,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
         {[
           { label: t.staff.totalTeam, value: staff.length.toString(), icon: Users, color: "#c9956b" },
           { label: t.appointments.totalAppointments, value: totalAppointments.toString(), icon: CalendarDays, color: "#7b9ec9" },
-          { label: t.staff.revenueGenerated, value: `₺${totalRevenue.toFixed(0)}`, icon: DollarSign, color: "#9ec97b" },
+          { label: t.staff.revenueGenerated, value: `₺${totalRevenue.toFixed(0)}`, icon: TurkishLira, color: "#9ec97b" },
         ].map((stat) => (
           <div key={stat.label} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ width: 38, height: 38, borderRadius: 10, background: stat.color + "18", display: "flex", alignItems: "center", justifyContent: "center" }}>
