@@ -4,7 +4,7 @@ import { AppointmentsClient } from "@/components/appointments/appointments-clien
 export default async function AppointmentsPage() {
   const [appointments, services, staff] = await Promise.all([
     prisma.appointment.findMany({
-      include: { service: true, staff: true },
+      include: { service: true, staff: true, customer: true, userPackage: true},
       orderBy: { startTime: "desc" },
       take: 200,
     }),

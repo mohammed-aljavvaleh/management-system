@@ -9,16 +9,19 @@ import { useLang } from "@/components/providers/language-provider";
 
 type Service = { id: string; name: string; price: number; duration: number };
 type Staff = { id: string; name: string; role: string };
+type Customer = { id: string; name: string; phone?: string };
+type UserPackage = { id: string; name: string; remainingSessions: number; totalSessions: number } |  null;
+
 type Appointment = {
   id: string;
   startTime: Date | string;
-  customerName: string;
-  customerPhone?: string | null;
+  customer: Customer;
   status: string;
   staffId: string;
   serviceId: string;
   service: Service;
   staff: Staff;
+  usererPackage?: UserPackage;
 };
 
 type Props = {
@@ -33,14 +36,12 @@ export function AppointmentsClient({ initialAppointments, services, staff }: Pro
   const router = useRouter();
   const { t } = useLang();
 
-  // Translated month names (index 0–11)
   const MONTHS = [
     t.months.january, t.months.february, t.months.march, t.months.april,
     t.months.may, t.months.june, t.months.july, t.months.august,
     t.months.september, t.months.october, t.months.november, t.months.december,
   ];
 
-  // Translated full day names (index 0=Sun … 6=Sat)
   const FULL_DAYS = [
     t.fullDays.sunday, t.fullDays.monday, t.fullDays.tuesday, t.fullDays.wednesday,
     t.fullDays.thursday, t.fullDays.friday, t.fullDays.saturday,
@@ -80,7 +81,8 @@ export function AppointmentsClient({ initialAppointments, services, staff }: Pro
   const filteredList = appointments.filter((a) => {
     const matchSearch =
       !search ||
-      a.customerName.toLowerCase().includes(search.toLowerCase()) ||
+      a.customer.name.toLowerCase().includes(search.toLowerCase()) ||
+      a.customer.phone?.toLowerCase().includes(search.toLowerCase()) ||
       a.service.name.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === "ALL" || a.status === filterStatus;
     const matchStaff = filterStaff === "ALL" || a.staffId === filterStaff;
@@ -345,9 +347,9 @@ export function AppointmentsClient({ initialAppointments, services, staff }: Pro
                     {format(new Date(appt.startTime), "MMM d, h:mm a")}
                   </span>
                   <div>
-                    <div style={{ fontWeight: 500 }}>{appt.customerName}</div>
-                    {appt.customerPhone && (
-                      <div style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{appt.customerPhone}</div>
+                    <div style={{ fontWeight: 500 }}>{appt.customer.name}</div>
+                    {appt.customer.phone && (
+                      <div style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{appt.customer.phone}</div>
                     )}
                   </div>
                   <span>{appt.service.name}</span>
@@ -422,7 +424,7 @@ function AppointmentCard({
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
         <div>
-          <div style={{ fontWeight: 500, fontSize: 13.5 }}>{appt.customerName}</div>
+          <div style={{ fontWeight: 500, fontSize: 13.5 }}>{appt.customer.name}</div>
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
             {format(new Date(appt.startTime), "h:mm a")} · {appt.service.name}
           </div>

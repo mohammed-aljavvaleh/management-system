@@ -5,7 +5,8 @@
     "services": "Services",
     "staff": "Staff",
     "reports": "Reports",
-    "adminPanel": "Admin Panel"
+    "adminPanel": "Admin Panel",
+    "customers": "Customers"
   },
   "dashboard": {
     "greeting_morning": "Good morning, Admin",

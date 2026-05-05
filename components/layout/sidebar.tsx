@@ -23,6 +23,7 @@ export function Sidebar() {
     { href: "/services", label: t.nav.services, icon: Scissors },
     { href: "/staff", label: t.nav.staff, icon: Users },
     { href: "/reports", label: t.nav.reports, icon: BarChart2 },
+    { href: "/customers", label: t.nav.customers, icon: Sparkles },
   ];
 
   return (

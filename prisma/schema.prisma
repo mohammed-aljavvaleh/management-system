@@ -13,6 +13,15 @@ datasource db {
   provider = "postgresql"
 }
 
+model Customer {
+  id           String        @id @default(cuid())
+  createdAt    DateTime      @default(now())
+  name         String
+  phone        String        @unique
+  appointments Appointment[]
+  packages     UserPackage[]
+}
+
 model Service {
   id           String        @id @default(cuid())
   name         String        // e.g., "Manicure"
@@ -28,19 +37,51 @@ model Staff {
   appointments Appointment[]
 }
 
+model UserPackage {
+  id                String        @id @default(cuid())
+  createdAt         DateTime      @default(now())
+  name              String
+
+  totalSessions     Int
+  remainingSessions Int
+
+  totalPrice        Float
+  paidAmount        Float         @default(0)
+
+  customerId        String
+  customer          Customer      @relation(fields: [customerId], references: [id])
+
+  appointments      Appointment[]
+  installments      Installment[]
+}
+
+model Installment {
+  id            String      @id @default(cuid())
+  paidAt        DateTime    @default(now())
+  amount        Float
+  note          String?
+
+  userPackageId String
+  userPackage   UserPackage @relation(fields: [userPackageId], references: [id])
+}
+
 model Appointment {
-  id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  startTime   DateTime
-  customerName String
-  customerPhone String?
-  
-  serviceId   String
-  service     Service  @relation(fields: [serviceId], references: [id])
+  id             String   @id @default(cuid())
+  createdAt      DateTime @default(now())
+  startTime      DateTime
+   
+  customerId     String
+  customer       Customer @relation(fields: [customerId], references: [id]) 
+     
+  serviceId      String
+  service        Service  @relation(fields: [serviceId], references: [id])
   priceAtBooking Float
   
-  staffId     String
-  staff       Staff    @relation(fields: [staffId], references: [id])
+  staffId        String
+  staff          Staff    @relation(fields: [staffId], references: [id])
+  
+  userPackageId  String?
+  userPackage    UserPackage? @relation(fields: [userPackageId], references: [id])
 
-  status      String   @default("SCHEDULED") // SCHEDULED, CANCELLED, COMPLETED
+  status         String   @default("SCHEDULED") // SCHEDULED, CANCELLED, COMPLETED
 }

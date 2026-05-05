@@ -8,8 +8,7 @@ import { useLang } from "@/components/providers/language-provider";
 type Appointment = {
   id: string;
   startTime: Date | string;
-  customerName: string;
-  customerPhone?: string | null;
+  customer: { name: string; phone: string };
   status: string;
   priceAtBooking: number;
   service: { name: string; price: number; duration: number };
@@ -94,17 +93,11 @@ export function DashboardClient({
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  background: stat.color + "18",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
+              <div style={{
+                width: 36, height: 36, borderRadius: 10,
+                background: stat.color + "18",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
                 <stat.icon size={18} color={stat.color} />
               </div>
               <TrendingUp size={14} color="var(--muted-foreground)" />
@@ -130,12 +123,9 @@ export function DashboardClient({
           <div
             key={s.label}
             style={{
-              padding: "8px 16px",
-              borderRadius: 8,
-              background: s.bg,
-              color: s.color,
-              fontSize: 13,
-              fontWeight: 500,
+              padding: "8px 16px", borderRadius: 8,
+              background: s.bg, color: s.color,
+              fontSize: 13, fontWeight: 500,
             }}
           >
             {s.value} {s.label}
@@ -144,14 +134,9 @@ export function DashboardClient({
         <Link
           href="/appointments/new"
           style={{
-            marginLeft: "auto",
-            padding: "8px 20px",
-            borderRadius: 8,
-            background: "var(--primary)",
-            color: "white",
-            fontSize: 13,
-            fontWeight: 500,
-            textDecoration: "none",
+            marginLeft: "auto", padding: "8px 20px", borderRadius: 8,
+            background: "var(--primary)", color: "white",
+            fontSize: 13, fontWeight: 500, textDecoration: "none",
           }}
         >
           + {t.dashboard.newAppointment}
@@ -159,23 +144,11 @@ export function DashboardClient({
       </div>
 
       {/* Today's Appointments */}
-      <div
-        style={{
-          background: "var(--card)",
-          border: "1px solid var(--border)",
-          borderRadius: 12,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            padding: "18px 22px",
-            borderBottom: "1px solid var(--border)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
+      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{
+          padding: "18px 22px", borderBottom: "1px solid var(--border)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 500 }}>
             {t.dashboard.todaySchedule}
           </h2>
@@ -199,9 +172,7 @@ export function DashboardClient({
                   animationDelay: `${i * 40}ms`,
                   padding: "14px 22px",
                   borderBottom: i < todayAppointments.length - 1 ? "1px solid var(--border)" : "none",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 16,
+                  display: "flex", alignItems: "center", gap: 16,
                 }}
               >
                 <div style={{ width: 64, flexShrink: 0 }}>
@@ -213,19 +184,19 @@ export function DashboardClient({
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    width: 36, height: 36, borderRadius: "50%",
-                    background: "var(--primary-light)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 14, fontWeight: 600, color: "var(--primary)", flexShrink: 0,
-                  }}
-                >
-                  {appt.customerName.charAt(0).toUpperCase()}
+                <div style={{
+                  width: 36, height: 36, borderRadius: "50%",
+                  background: "var(--primary-light)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 14, fontWeight: 600, color: "var(--primary)", flexShrink: 0,
+                }}>
+                  {appt.customer.name.charAt(0).toUpperCase()}
                 </div>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 500, fontSize: 13.5, marginBottom: 2 }}>{appt.customerName}</div>
+                  <div style={{ fontWeight: 500, fontSize: 13.5, marginBottom: 2 }}>
+                    {appt.customer.name}
+                  </div>
                   <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                     {appt.service.name} · {appt.staff.name}
                   </div>

@@ -5,7 +5,8 @@
     "services": "Hizmetler",
     "staff": "Personel",
     "reports": "Raporlar",
-    "adminPanel": "Yönetim Paneli"
+    "adminPanel": "Yönetim Paneli",
+    "customers": "Müşteriler"
   },
   "dashboard": {
     "greeting_morning": "Günaydın, Admin",

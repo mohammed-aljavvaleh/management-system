@@ -1,236 +1,127 @@
 import { PrismaClient } from "../app/generated/prisma";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-const adapter = new   PrismaPg(process.env.DATABASE_URL!);
+const adapter = new PrismaPg(process.env.DATABASE_URL!);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log("Seeding database...");
+  console.log("Starting full database seed...");
 
-  // Clean slate
+  // 1. Clean existing data
+  await prisma.installment.deleteMany();
   await prisma.appointment.deleteMany();
-  await prisma.service.deleteMany();
+  await prisma.userPackage.deleteMany();
+  await prisma.customer.deleteMany();
   await prisma.staff.deleteMany();
+  await prisma.service.deleteMany();
 
-  // Services
-  const manicure = await prisma.service.create({
-    data: { name: "Classic Manicure", price: 250, duration: 30 },
-  });
-  const gel = await prisma.service.create({
-    data: { name: "Gel Manicure", price: 400, duration: 45 },
-  });
-  const pedicure = await prisma.service.create({
-    data: { name: "Classic Pedicure", price: 350, duration: 45 },
-  });
-  const nailArt = await prisma.service.create({
-    data: { name: "Nail Art", price: 150, duration: 20 },
-  });
-  const acrylic = await prisma.service.create({
-    data: { name: "Acrylic Full Set", price: 650, duration: 90 },
+  // 2. Seed 5 Services
+  const services = await Promise.all([
+    prisma.service.create({ data: { name: "Classic Manicure", price: 30, duration: 30 } }),
+    prisma.service.create({ data: { name: "Gel Extensions", price: 60, duration: 90 } }),
+    prisma.service.create({ data: { name: "Pedicure Deluxe", price: 45, duration: 45 } }),
+    prisma.service.create({ data: { name: "Laser - Full Body", price: 1500, duration: 120 } }),
+    prisma.service.create({ data: { name: "Nail Art Custom", price: 20, duration: 30 } }),
+  ]);
+
+  // 3. Seed 4 Staff Members
+  const staff = await Promise.all([
+    prisma.staff.create({ data: { name: "Lamees Bahaa", role: "Owner" } }),
+    prisma.staff.create({ data: { name: "Sara Ahmed", role: "Senior Technician" } }),
+    prisma.staff.create({ data: { name: "Nour Hassan", role: "Technician" } }),
+    prisma.staff.create({ data: { name: "Zeynep Kaya", role: "Junior Technician" } }),
+  ]);
+
+  // 4. Seed 15 Customers (Turkish phone format 05XXXXXXXXX)
+  const customerNames = [
+    "Aisha Malik", "Fatma Demir", "Emel Can", "Leyla Yıldız", "Meryem Aksoy",
+    "Selma Öztürk", "Hülya Arslan", "Gül Şahin", "Derya Aydın", "Buse Koç",
+    "Arzu Kurt", "Sibel Özdemir", "Nalan Yılmaz", "Pelin Polat", "Selin Kılıç"
+  ];
+
+  const customers = await Promise.all(
+    customerNames.map((name, i) =>
+      prisma.customer.create({
+        data: { name, phone: `05${(555000000 + i).toString()}` }
+      })
+    )
+  );
+
+  // 5. Create Packages for some customers
+  const laserService = services.find(s => s.name === "Laser - Full Body")!;
+  const activePackages = await Promise.all([
+    prisma.userPackage.create({
+      data: {
+        name: "Laser Package 6 Sessions",
+        totalSessions: 6,
+        remainingSessions: 4,
+        totalPrice: 1200,
+        paidAmount: 400,
+        customerId: customers[0].id,
+      }
+    }),
+    prisma.userPackage.create({
+      data: {
+        name: "Monthly Manicure Club",
+        totalSessions: 4,
+        remainingSessions: 2,
+        totalPrice: 100,
+        paidAmount: 50,
+        customerId: customers[1].id,
+      }
+    })
+  ]);
+
+  // 6. Seed Installments for those packages
+  await prisma.installment.createMany({
+    data: [
+      { amount: 200, note: "Down Payment", userPackageId: activePackages[0].id },
+      { amount: 200, note: "Installment 1", userPackageId: activePackages[0].id },
+      { amount: 50, note: "First Month", userPackageId: activePackages[1].id },
+    ]
   });
 
-  console.log("Services created");
+  // 7. Generate scrambled Appointments
+  const statuses = ["COMPLETED", "SCHEDULED", "CANCELLED"];
+  const appointmentsData = [];
 
-  // Staff
-  const lamees = await prisma.staff.create({
-    data: { name: "Lamees Bahaa", role: "Owner" },
-  });
-  const sara = await prisma.staff.create({
-    data: { name: "Sara Ahmed", role: "Senior Technician" },
-  });
-  const nour = await prisma.staff.create({
-    data: { name: "Nour Hassan", role: "Technician" },
-  });
+  // Generate 40 random appointments over the last month and next month
+  for (let i = 0; i < 40; i++) {
+    const randomCustomer = customers[Math.floor(Math.random() * customers.length)];
+    const randomStaff = staff[Math.floor(Math.random() * staff.length)];
+    const randomService = services[Math.floor(Math.random() * services.length)];
+    
+    const date = new Date();
+    date.setDate(date.getDate() + (Math.floor(Math.random() * 60) - 30)); // -30 to +30 days
+    date.setHours(9 + Math.floor(Math.random() * 8), 0, 0, 0);
 
-  console.log("Staff created");
+    // If it's a past date, mostly set to COMPLETED or CANCELLED. If future, SCHEDULED.
+    let status = statuses[Math.floor(Math.random() * statuses.length)];
+    if (date > new Date()) status = "SCHEDULED";
+    else if (status === "SCHEDULED") status = "COMPLETED";
 
-  // Appointments — today and nearby dates
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+    // Randomly link some to Aisha's Laser Package if the service matches
+    const usePackage = randomCustomer.id === customers[0].id && randomService.id === laserService.id;
 
-  function apptTime(dayOffset: number, hour: number, minute = 0) {
-    const d = new Date(today);
-    d.setDate(d.getDate() + dayOffset);
-    d.setHours(hour, minute, 0, 0);
-    return d;
+    appointmentsData.push({
+      startTime: date,
+      customerId: randomCustomer.id,
+      serviceId: randomService.id,
+      staffId: randomStaff.id,
+      priceAtBooking: usePackage ? 0 : randomService.price,
+      userPackageId: usePackage ? activePackages[0].id : null,
+      status: status,
+    });
   }
 
-  await prisma.appointment.createMany({
-    data: [
-      // Today
-      {
-        customerName: "Aisha Malik",
-        customerPhone: "0501000001",
-        startTime: apptTime(0, 9, 0),
-        serviceId: manicure.id,
-        staffId: sara.id,
-        priceAtBooking: manicure.price,
-        status: "COMPLETED",
-      },
-      {
-        customerName: "Reem Al-Farsi",
-        customerPhone: "05010006302",
-        startTime: apptTime(0, 10, 30),
-        serviceId: gel.id,
-        staffId: lamees.id,
-        priceAtBooking: gel.price,
-        status: "COMPLETED",
-      },
-      {
-        customerName: "Dana Khalid",
-        customerPhone: "05234953498",
-        startTime: apptTime(0, 13, 0),
-        serviceId: pedicure.id,
-        staffId: nour.id,
-        priceAtBooking: pedicure.price,
-        status: "SCHEDULED",
-      },
-      {
-        customerName: "Lina Saeed",
-        customerPhone: "0501000003",
-        startTime: apptTime(0, 14, 30),
-        serviceId: acrylic.id,
-        staffId: lamees.id,
-        priceAtBooking: acrylic.price,
-        status: "SCHEDULED",
-      },
-      {
-        customerName: "Hessa Nasser",
-        customerPhone: "05344456235",
-        startTime: apptTime(0, 16, 0),
-        serviceId: nailArt.id,
-        staffId: sara.id,
-        priceAtBooking: nailArt.price,
-        status: "CANCELLED",
-      },
+  await prisma.appointment.createMany({ data: appointmentsData });
 
-      // Yesterday
-      {
-        customerName: "Mona Hassan",
-        customerPhone: "0501000004",
-        startTime: apptTime(-1, 10, 0),
-        serviceId: gel.id,
-        staffId: sara.id,
-        priceAtBooking: gel.price,
-        status: "COMPLETED",
-      },
-      {
-        customerName: "Fatima Al-Ali",
-        customerPhone: "05394338494",
-        startTime: apptTime(-1, 11, 30),
-        serviceId: manicure.id,
-        staffId: nour.id,
-        priceAtBooking: manicure.price,
-        status: "COMPLETED",
-      },
-      {
-        customerName: "Sara Al-Mutairi",
-        customerPhone: "05230904334",
-        startTime: apptTime(-1, 14, 0),
-        serviceId: pedicure.id,
-        staffId: lamees.id,
-        priceAtBooking: pedicure.price,
-        status: "COMPLETED",
-      },
-
-      // 2 days ago
-      {
-        customerName: "Noura Ahmed",
-        customerPhone: "0501000005",
-        startTime: apptTime(-2, 9, 30),
-        serviceId: acrylic.id,
-        staffId: lamees.id,
-        priceAtBooking: acrylic.price,
-        status: "COMPLETED",
-      },
-      {
-        customerName: "Wafa Al-Rashid",
-        customerPhone: "05353994434",
-        startTime: apptTime(-2, 13, 0),
-        serviceId: gel.id,
-        staffId: sara.id,
-        priceAtBooking: gel.price,
-        status: "COMPLETED",
-      },
-
-      // 3 days ago
-      {
-        customerName: "Basma Yousef",
-        customerPhone: "05344304334",
-        startTime: apptTime(-3, 10, 0),
-        serviceId: nailArt.id,
-        staffId: nour.id,
-        priceAtBooking: nailArt.price,
-        status: "COMPLETED",
-      },
-      {
-        customerName: "Hana Al-Dosari",
-        customerPhone: "0501000006",
-        startTime: apptTime(-3, 15, 0),
-        serviceId: manicure.id,
-        staffId: sara.id,
-        priceAtBooking: manicure.price,
-        status: "COMPLETED",
-      },
-
-      // Tomorrow
-      {
-        customerName: "Rawan Al-Otaibi",
-        customerPhone: "0501000007",
-        startTime: apptTime(1, 10, 0),
-        serviceId: gel.id,
-        staffId: sara.id,
-        priceAtBooking: gel.price,
-        status: "SCHEDULED",
-      },
-      {
-        customerName: "Manal Hamdan",
-        customerPhone: "05394302334",
-        startTime: apptTime(1, 12, 0),
-        serviceId: pedicure.id,
-        staffId: nour.id,
-        priceAtBooking: pedicure.price,
-        status: "SCHEDULED",
-      },
-      {
-        customerName: "Dalal Al-Shammari",
-        customerPhone: "05394304332",
-        startTime: apptTime(1, 14, 30),
-        serviceId: acrylic.id,
-        staffId: lamees.id,
-        priceAtBooking: acrylic.price,
-        status: "SCHEDULED",
-      },
-
-      // Day after tomorrow
-      {
-        customerName: "Shahad Bilal",
-        customerPhone: "0501000008",
-        startTime: apptTime(2, 11, 0),
-        serviceId: manicure.id,
-        staffId: nour.id,
-        priceAtBooking: manicure.price,
-        status: "SCHEDULED",
-      },
-      {
-        customerName: "Nadia Al-Rashidi",
-        customerPhone: "05394304334",
-        startTime: apptTime(2, 13, 30),
-        serviceId: gel.id,
-        staffId: lamees.id,
-        priceAtBooking: gel.price,
-        status: "SCHEDULED",
-      },
-    ],
-  });
-
-  console.log("Appointments created");
-  console.log("Database seeded successfully!");
+  console.log("Seeding complete! 15 Customers, 4 Staff, 5 Services, and 40 scrambled appointments created.");
 }
 
 main()
   .catch((e) => {
-    console.error("Seed failed:", e);
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {

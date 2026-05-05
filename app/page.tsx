@@ -7,19 +7,12 @@ export default async function DashboardPage() {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const [todayAppointments, totalRevenuePeriod, upcomingCount, services, staff] =
+  const [todayAppointments, upcomingCount, services, staff] =
     await Promise.all([
       prisma.appointment.findMany({
         where: { startTime: { gte: today, lt: tomorrow } },
-        include: { service: true, staff: true },
+        include: { service: true, staff: true, customer: true },
         orderBy: { startTime: "asc" },
-      }),
-      prisma.appointment.findMany({
-        where: {
-          startTime: { gte: today },
-          status: { not: "CANCELLED" },
-        },
-        include: { service: true },
       }),
       prisma.appointment.count({
         where: { startTime: { gte: today }, status: "SCHEDULED" },
