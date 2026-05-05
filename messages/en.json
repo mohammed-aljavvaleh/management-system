@@ -58,6 +58,32 @@
       "cancelled": "Cancelled"
     }
   },
+  "customers": {
+    "title": "Manage your Customers",
+    "subtitle1": "Customer exists",
+    "subtitle2": "Customers exist",
+    "noCustomers": "No customers yet. They will appear here once appointments are booked.",
+    "sessionsLeft": "sessions left",
+    "ViewDetails": "View Details",
+    "back": "All Customers",
+    "customerScince": "Customer since",
+    "packages": "Packages",
+    "totalSpent": "Paid",
+    "totalOwed": "Owed",
+    "activePackages": "Active Packages",
+    "completedPackages": "Completed Packages",
+    "noActive": "No active packages",
+    "noCompleted": "No completed packages",
+    "started": "Started",
+    "payments": "Payments",
+    "Total": "Total",
+    "history": "Appointment History",
+    "noHistory": "No past appointments",
+    "runningLow": "Running low",
+    "sessionsUsed": "{used} of {total} sessions used",
+    "packageBadge": "Package",
+    "completedSessions": "{total} sessions · Completed"
+  },
   "appointmentForm": {
     "title": "New Appointment",
     "subtitle": "Fill in the details to schedule a new appointment",
@@ -171,7 +197,9 @@
     "edit": "Edit",
     "add": "Add",
     "search": "Search",
-    "actions": "actions"
+    "actions": "actions",
+    "AM": "AM",
+    "PM": "PM"
   },
   "weekDays": {
     "sunday": "Sun",

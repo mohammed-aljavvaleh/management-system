@@ -28,6 +28,32 @@
     "viewAll": "Tümünü gör →",
     "noAppointments": "Bugün için planlanmış randevu yok"
   },
+  "customers": {
+    "title": "Müşterilerinizi yönetin",
+    "subtitle1": "Müşteri var",
+    "subtitle2": "Müşteriler var",
+    "noCustomers": "Henüz müşteri yok. Randevular oluşturuldukça burada görünecek.",
+    "sessionsLeft": "Oturum kaldı",
+    "ViewDetails": "Detayları Görüntüle",
+    "back": "Tüm Müşteriler",
+    "customerScince": "Müşteri Oluşturulma Tarihi",
+    "packages": "Paketler",
+    "totalSpent": "Ödenmiş",
+    "totalOwed": "Borç",
+    "activePackages": "Aktif Paketler",
+    "completedPackages": "Tamamlanan Paketler",
+    "noActive": "Aktif paket yok",
+    "noCompleted": "Tamamlanan paket yok",
+    "started": "Başlangıç",
+    "payments": "Ödemeler",
+    "Total": "Toplam",
+    "history": "Randevu Geçmişi",
+    "noHistory": "Geçmiş randevu yok",
+    "runningLow": "Az kaldı",
+    "sessionsUsed": "{total} oturumdan {used} tanesi kullanıldı",
+    "packageBadge": "Paket",
+    "completedSessions": "{total} oturum · Tamamlandı"
+  },
   "appointments": {
     "title": "Randevular",
     "totalAppointments": "toplam randevu",
@@ -171,7 +197,9 @@
     "edit": "Düzenle",
     "add": "Ekle",
     "search": "Ara",
-    "actions": "Eylemler"
+    "actions": "Eylemler",
+    "AM": "ÖÖ",
+    "PM": "ÖS"
   },
   "weekDays": {
     "sunday": "Paz",

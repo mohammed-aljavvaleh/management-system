@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { CalendarDays, TurkishLira, Clock, Users, Scissors, TrendingUp } from "lucide-react";
+import { CalendarDays, TurkishLira, Clock, IdCardLanyard, Scissors, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useLang } from "@/components/providers/language-provider";
 
@@ -61,7 +61,7 @@ export function DashboardClient({
     {
       label: t.dashboard.staff,
       value: staffCount.toString(),
-      icon: Users,
+      icon: IdCardLanyard,
       sub: t.dashboard.teamMembers,
       color: "#c97bb5",
     },

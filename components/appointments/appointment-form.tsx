@@ -451,7 +451,7 @@ export function AppointmentForm({ services, staff }: Props) {
                   <input
                     type="number"
                     min={0}
-                    step={0.01}
+                    step={10}
                     value={priceOverride}
                     onChange={(e) => setPriceOverride(e.target.value)}
                     placeholder={`${defaultTotalPrice}`}
@@ -471,7 +471,7 @@ export function AppointmentForm({ services, staff }: Props) {
                     <input
                       type="number"
                       min={0}
-                      step={0.01}
+                      step={10}
                       max={totalPrice}
                       value={installmentAmount}
                       onChange={(e) => setInstallmentAmount(e.target.value)}

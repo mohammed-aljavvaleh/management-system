@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Pencil, Trash2, X, Users, CalendarDays, TurkishLira } from "lucide-react";
+import { Plus, Pencil, Trash2, X, IdCardLanyard, CalendarDays, TurkishLira } from "lucide-react";
 import { useLang } from "@/components/providers/language-provider";
 
 type StaffMember = {
@@ -132,7 +132,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
         {[
-          { label: t.staff.totalTeam, value: staff.length.toString(), icon: Users, color: "#c9956b" },
+          { label: t.staff.totalTeam, value: staff.length.toString(), icon: IdCardLanyard, color: "#c9956b" },
           { label: t.appointments.totalAppointments, value: totalAppointments.toString(), icon: CalendarDays, color: "#7b9ec9" },
           { label: t.staff.revenueGenerated, value: `₺${totalRevenue.toFixed(0)}`, icon: TurkishLira, color: "#9ec97b" },
         ].map((stat) => (
@@ -151,7 +151,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
       {/* Staff List */}
       {staff.length === 0 ? (
         <div style={{ background: "var(--card)", border: "2px dashed var(--border)", borderRadius: 12, padding: "60px 24px", textAlign: "center" }}>
-          <Users size={36} style={{ margin: "0 auto 12px", color: "var(--muted-foreground)", opacity: 0.5 }} />
+          <IdCardLanyard size={36} style={{ margin: "0 auto 12px", color: "var(--muted-foreground)", opacity: 0.5 }} />
           <p style={{ color: "var(--muted-foreground)", marginBottom: 16 }}>{t.staff.noStaff}</p>
           <button onClick={openCreate} style={primaryBtnStyle}>{t.staff.addFirst}</button>
         </div>

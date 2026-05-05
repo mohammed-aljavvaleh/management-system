@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Scissors,
   Users,
+  IdCardLanyard,
   BarChart2,
   Sparkles,
 } from "lucide-react";
@@ -20,10 +21,10 @@ export function Sidebar() {
   const nav = [
     { href: "/", label: t.nav.dashboard, icon: LayoutDashboard },
     { href: "/appointments", label: t.nav.appointments, icon: CalendarDays },
+    { href: "/customers", label: t.nav.customers, icon: Users },
     { href: "/services", label: t.nav.services, icon: Scissors },
-    { href: "/staff", label: t.nav.staff, icon: Users },
+    { href: "/staff", label: t.nav.staff, icon: IdCardLanyard },
     { href: "/reports", label: t.nav.reports, icon: BarChart2 },
-    { href: "/customers", label: t.nav.customers, icon: Sparkles },
   ];
 
   return (
