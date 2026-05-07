@@ -10,11 +10,17 @@ import {
   IdCardLanyard,
   BarChart2,
   Sparkles,
+  X,
 } from "lucide-react";
 import { useLang } from "@/components/providers/language-provider";
 import { LanguageToggle } from "@/components/layout/language-toggle";
 
-export function Sidebar() {
+type SidebarProps = {
+  isOpen: boolean;
+  onClose: () => void;
+};
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const path = usePathname();
   const { t } = useLang();
 
@@ -28,99 +34,116 @@ export function Sidebar() {
   ];
 
   return (
-    <aside
-      style={{
-        width: "var(--sidebar-width)",
-        minHeight: "100vh",
-        background: "var(--card)",
-        borderRight: "1px solid var(--border)",
-        display: "flex",
-        flexDirection: "column",
-        flexShrink: 0,
-      }}
-    >
-      {/* Logo */}
-      <div style={{ padding: "28px 20px 24px", borderBottom: "1px solid var(--border)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
+    <>
+      <style>{`
+        .sidebar-close-btn { display: flex; }
+        .sidebar-root {
+          position: fixed;
+          top: 0; left: 0; bottom: 0;
+          z-index: 40;
+          width: var(--sidebar-width);
+          background: var(--card);
+          border-right: 1px solid var(--border);
+          display: flex;
+          flex-direction: column;
+          /* Override the global * transition so only transform animates */
+          transition: transform 300ms ease-in-out !important;
+          transform: ${isOpen ? "translateX(0)" : "translateX(-100%)"};
+        }
+
+        @media (min-width: 1024px) {
+          .sidebar-root {
+            position: static;
+            transform: translateX(0) !important;
+            flex-shrink: 0;
+            min-height: 100vh;
+          }
+          .sidebar-close-btn { display: none; }
+        }
+      `}</style>
+
+      <aside className="sidebar-root">
+        {/* Close button — mobile only */}
+        <button
+          className="sidebar-close-btn"
+          onClick={onClose}
+          style={{
+            position: "absolute", top: 14, right: 14,
+            background: "none", border: "none", cursor: "pointer",
+            color: "var(--muted-foreground)", padding: 4, borderRadius: 6,
+            alignItems: "center", justifyContent: "center",
+          }}
+          aria-label="Close menu"
+        >
+          <X size={18} />
+        </button>
+
+        {/* Logo */}
+        <div style={{ padding: "28px 20px 24px", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: "50%",
               background: "linear-gradient(135deg, var(--primary), var(--accent))",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Sparkles size={15} color="white" />
-          </div>
-          <div>
-            <div
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: 17,
-                fontWeight: 600,
-                color: "var(--foreground)",
-                lineHeight: 1.1,
-              }}
-            >
-              Lamees
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <Sparkles size={15} color="white" />
             </div>
-            <div style={{ fontSize: 10, color: "var(--muted-foreground)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-              Nail Salon
+            <div>
+              <div style={{
+                fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 600,
+                color: "var(--foreground)", lineHeight: 1.1,
+              }}>
+                Lamees
+              </div>
+              <div style={{
+                fontSize: 10, color: "var(--muted-foreground)",
+                letterSpacing: "0.08em", textTransform: "uppercase",
+              }}>
+                Nail Salon
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: "12px 10px" }}>
-        {nav.map(({ href, label, icon: Icon }) => {
-          const active = path === href || (href !== "/" && path.startsWith(href));
-          return (
-            <Link
-              key={href}
-              href={href}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "9px 12px",
-                borderRadius: 8,
-                marginBottom: 2,
-                color: active ? "var(--primary)" : "var(--muted-foreground)",
-                background: active ? "var(--primary-light)" : "transparent",
-                fontWeight: active ? 500 : 400,
-                fontSize: 13.5,
-                textDecoration: "none",
-              }}
-            >
-              <Icon size={16} strokeWidth={active ? 2.2 : 1.8} />
-              {label}
-            </Link>
-          );
-        })}
-      </nav>
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: "12px 10px" }}>
+          {nav.map(({ href, label, icon: Icon }) => {
+            const active = path === href || (href !== "/" && path.startsWith(href));
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={onClose}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "9px 12px", borderRadius: 8, marginBottom: 2,
+                  color: active ? "var(--primary)" : "var(--muted-foreground)",
+                  background: active ? "var(--primary-light)" : "transparent",
+                  fontWeight: active ? 500 : 400,
+                  fontSize: 13.5, textDecoration: "none",
+                }}
+              >
+                <Icon size={16} strokeWidth={active ? 2.2 : 1.8} />
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
 
-      {/* Bottom */}
-      <div
-        style={{
-          padding: "16px 20px",
-          borderTop: "1px solid var(--border)",
-          display: "flex",
-          flexDirection: "column",
-          gap: 10,
-        }}
-      >
-        <LanguageToggle />
-        <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 13, color: "var(--foreground)" }}>
-            {t.nav.adminPanel}
+        {/* Bottom */}
+        <div style={{
+          padding: "16px 20px", borderTop: "1px solid var(--border)",
+          display: "flex", flexDirection: "column", gap: 10,
+        }}>
+          <LanguageToggle />
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 13, color: "var(--foreground)" }}>
+              {t.nav.adminPanel}
+            </div>
+            <div>v1.0.0</div>
           </div>
-          <div>v1.0.0</div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }

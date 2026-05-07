@@ -28,7 +28,9 @@
   --font-body: 'DM Sans', sans-serif;
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -54,8 +56,20 @@ h1, h2, h3, .display {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-/* Transitions */
-* { transition-property: color, background-color, border-color, opacity, transform, box-shadow; transition-duration: 150ms; transition-timing-function: ease; }
+/*
+  Scoped transitions — applied only to interactive elements, not layout/structural ones.
+  The previous `* { transition }` rule was fighting the sidebar's transform animation.
+*/
+a,
+button,
+input,
+select,
+textarea,
+[role="button"] {
+  transition-property: color, background-color, border-color, opacity, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
 
 .status-scheduled { background: #e8f4fd; color: #1a6fa0; }
 .status-completed { background: #e8f5e8; color: #2d7a2d; }
