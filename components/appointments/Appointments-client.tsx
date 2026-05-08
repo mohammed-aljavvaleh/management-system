@@ -274,7 +274,9 @@ export function AppointmentsClient({
   }, [appointments]);
 
   const selectedDayAppts = selectedDate
-    ? apptsByDay[format(selectedDate, "yyyy-MM-dd")] || []
+    ? (apptsByDay[format(selectedDate, "yyyy-MM-dd")] || [])
+    .slice()
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
     : [];
 
   const filteredList = appointments.filter((a) => {
@@ -286,7 +288,8 @@ export function AppointmentsClient({
     const matchStatus = filterStatus === "ALL" || a.status === filterStatus;
     const matchStaff = filterStaff === "ALL" || a.staffId === filterStaff;
     return matchSearch && matchStatus && matchStaff;
-  });
+  })
+  .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
   async function updateStatus(id: string, status: string) {
     setLoadingId(id);
