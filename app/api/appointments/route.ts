@@ -115,6 +115,7 @@ export async function POST(req: NextRequest) {
         data: {
           name: `${service.name} — ${sessionCount} Sessions`,
           customerId,
+          serviceId,           // ← now saved so next-session route can find it
           totalSessions: sessionCount,
           remainingSessions: sessionCount,
           totalPrice,

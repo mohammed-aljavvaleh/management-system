@@ -1,8 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { Prisma } from "@/app/generated/prisma";
 import Link from "next/link";
-import { Phone, Calendar, Package, ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  Phone, Calendar, Package, ArrowLeft,
+  Pencil, Trash2, Check, X, CalendarClock, FileText,
+} from "lucide-react";
 import { useLang } from "@/components/providers/language-provider";
 import { format } from "date-fns";
 import { tr, enUS } from "date-fns/locale";
@@ -10,11 +15,26 @@ import { tr, enUS } from "date-fns/locale";
 type CustomerWithDetails = Prisma.CustomerGetPayload<{
   include: {
     appointments: { include: { service: true; staff: true; userPackage: true } };
-    packages: { include: { installments: true; _count: { select: { appointments: true } } } };
+    packages: {
+      include: {
+        service: true;
+        installments: true;
+        _count: { select: { appointments: true } };
+      };
+    };
   };
 }>;
 
-export function CustomerProfileClient({ customer }: { customer: CustomerWithDetails }) {
+type Staff = { id: string; name: string; role: string };
+
+export function CustomerProfileClient({
+  customer,
+  staffList,
+}: {
+  customer: CustomerWithDetails;
+  staffList: Staff[];
+}) {
+  const router = useRouter();
   const { t, lang, mounted } = useLang();
   const dateLocale = lang === "tr" ? tr : enUS;
 
@@ -95,6 +115,9 @@ export function CustomerProfileClient({ customer }: { customer: CustomerWithDeta
         </div>
       </div>
 
+      {/* ── Staff Notes ──────────────────────────────────────────── */}
+      <CustomerNotesCard customerId={customer.id} initialNotes={customer.notes ?? null} />
+
       {/* ── Active Packages ──────────────────────────────────────── */}
       {activePackages.length > 0 && (
         <section style={{ marginBottom: 20 }}>
@@ -118,20 +141,34 @@ export function CustomerProfileClient({ customer }: { customer: CustomerWithDeta
                       <div style={{ fontWeight: 600, fontSize: 14.5 }}>{pkg.name}</div>
                       <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>
                         {t.customers.started} {fmt(pkg.createdAt, "d MMM yyyy")}
+                        {pkg.service && (
+                          <span style={{ marginLeft: 8, color: "var(--primary)" }}>
+                            · {pkg.service.name}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{
-                        fontSize: 15, fontWeight: 700,
-                        color: lowSessions ? "#c45c5c" : "var(--foreground)",
-                      }}>
-                        {pkg.remainingSessions} {t.customers.sessionsLeft}
-                      </div>
-                      {lowSessions && (
-                        <div style={{ fontSize: 11, color: "#c45c5c", marginTop: 2 }}>
-                          ⚠ {t.customers.runningLow}
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      {/* Schedule Next Session button */}
+                      <ScheduleNextSessionDialog
+                        pkg={pkg}
+                        customerId={customer.id}
+                        staffList={staffList}
+                        onScheduled={() => router.refresh()}
+                      />
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{
+                          fontSize: 15, fontWeight: 700,
+                          color: lowSessions ? "#c45c5c" : "var(--foreground)",
+                        }}>
+                          {pkg.remainingSessions} {t.customers.sessionsLeft}
                         </div>
-                      )}
+                        {lowSessions && (
+                          <div style={{ fontSize: 11, color: "#c45c5c", marginTop: 2 }}>
+                            ⚠ {t.customers.runningLow}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -213,45 +250,23 @@ export function CustomerProfileClient({ customer }: { customer: CustomerWithDeta
             {customer.appointments.map((appt) => {
               const statusColor =
                 appt.status === "COMPLETED" ? "#2d7a2d"
-                : appt.status === "CANCELLED" ? "#c45c5c"
-                : "var(--primary)";
+                  : appt.status === "CANCELLED" ? "#c45c5c"
+                    : "var(--primary)";
 
               const statusLabel =
                 appt.status === "COMPLETED" ? t.appointments.statuses.completed
-                : appt.status === "CANCELLED" ? t.appointments.statuses.cancelled
-                : t.appointments.statuses.scheduled;
+                  : appt.status === "CANCELLED" ? t.appointments.statuses.cancelled
+                    : t.appointments.statuses.scheduled;
 
               return (
-                <div key={appt.id} style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  padding: "13px 18px",
-                  background: "var(--card)", border: "1px solid var(--border)",
-                  borderRadius: 10,
-                }}>
-                  <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-                    <div style={{
-                      width: 8, height: 8, borderRadius: "50%",
-                      background: statusColor, flexShrink: 0,
-                    }} />
-                    <div>
-                      <div style={{ fontWeight: 500, fontSize: 13.5 }}>{appt.service.name}</div>
-                      <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>
-                        {fmt(appt.startTime, "d MMM yyyy")} · {fmt(appt.startTime, "HH:mm")} · {appt.staff.name}
-                        {appt.userPackage && (
-                          <span style={{ marginLeft: 8, padding: "1px 7px", background: "var(--primary-light)", color: "var(--primary)", borderRadius: 10, fontSize: 11 }}>
-                            {t.customers.packageBadge}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600 }}>₺{appt.priceAtBooking.toFixed(2)}</div>
-                    <div style={{ fontSize: 11, color: statusColor, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                      {statusLabel}
-                    </div>
-                  </div>
-                </div>
+                <AppointmentHistoryRow
+                  key={appt.id}
+                  appt={appt}
+                  statusColor={statusColor}
+                  statusLabel={statusLabel}
+                  fmt={fmt}
+                  packageBadgeLabel={t.customers.packageBadge}
+                />
               );
             })}
           </div>
@@ -290,3 +305,507 @@ export function CustomerProfileClient({ customer }: { customer: CustomerWithDeta
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Appointment History Row — with inline note display + edit
+// ─────────────────────────────────────────────────────────────────────────────
+
+type ApptRow = {
+  id: string;
+  startTime: Date | string;
+  status: string;
+  priceAtBooking: number;
+  notes?: string | null;
+  service: { name: string };
+  staff: { name: string };
+  userPackage?: { id: string; name: string } | null;
+};
+
+function AppointmentHistoryRow({
+  appt,
+  statusColor,
+  statusLabel,
+  fmt,
+  packageBadgeLabel,
+}: {
+  appt: ApptRow;
+  statusColor: string;
+  statusLabel: string;
+  fmt: (d: Date | string, p: string) => string;
+  packageBadgeLabel: string;
+}) {
+  const [notes, setNotes] = useState(appt.notes ?? "");
+  const [editingNote, setEditingNote] = useState(false);
+  const [noteDraft, setNoteDraft] = useState(notes);
+  const [savingNote, setSavingNote] = useState(false);
+
+  async function saveNote() {
+    setSavingNote(true);
+    try {
+      const res = await fetch(`/api/appointments/${appt.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: noteDraft }),
+      });
+      if (res.ok) {
+        setNotes(noteDraft);
+        setEditingNote(false);
+      }
+    } finally {
+      setSavingNote(false);
+    }
+  }
+
+  return (
+    <div style={{
+      padding: "13px 18px",
+      background: "var(--card)", border: "1px solid var(--border)",
+      borderRadius: 10,
+    }}>
+      {/* Main row */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: statusColor, flexShrink: 0 }} />
+          <div>
+            <div style={{ fontWeight: 500, fontSize: 13.5 }}>{appt.service.name}</div>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>
+              {fmt(appt.startTime, "d MMM yyyy")} · {fmt(appt.startTime, "HH:mm")} · {appt.staff.name}
+              {appt.userPackage && (
+                <span style={{ marginLeft: 8, padding: "1px 7px", background: "var(--primary-light)", color: "var(--primary)", borderRadius: 10, fontSize: 11 }}>
+                  {packageBadgeLabel}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* Note toggle button */}
+          <button
+            title={notes ? "Edit note" : "Add note"}
+            onClick={() => { setNoteDraft(notes); setEditingNote(true); }}
+            style={{
+              background: "none", border: "none", cursor: "pointer", padding: 4,
+              color: notes ? "var(--primary)" : "var(--muted-foreground)",
+              display: "flex", alignItems: "center",
+            }}
+          >
+            <FileText size={14} />
+          </button>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>₺{appt.priceAtBooking.toFixed(2)}</div>
+            <div style={{ fontSize: 11, color: statusColor, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              {statusLabel}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Existing note display */}
+      {notes && !editingNote && (
+        <div style={{
+          marginTop: 10, marginLeft: 22,
+          fontSize: 12.5, color: "var(--muted-foreground)",
+          fontStyle: "italic",
+          background: "var(--muted)", padding: "7px 11px",
+          borderRadius: 6, borderLeft: "2px solid var(--border)",
+        }}>
+          📝 {notes}
+        </div>
+      )}
+
+      {/* Note editor */}
+      {editingNote && (
+        <div style={{ marginTop: 10, marginLeft: 22 }}>
+          <textarea
+            value={noteDraft}
+            onChange={(e) => setNoteDraft(e.target.value)}
+            placeholder="Add a note about this appointment…"
+            rows={2}
+            autoFocus
+            style={{
+              width: "100%", padding: "8px 10px",
+              border: "1px solid var(--border)", borderRadius: 7,
+              background: "var(--background)", fontSize: 13,
+              color: "var(--foreground)", outline: "none",
+              resize: "vertical", fontFamily: "inherit",
+              boxSizing: "border-box",
+            }}
+          />
+          <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
+            <button
+              onClick={() => setEditingNote(false)}
+              style={ghostBtnStyle}
+              disabled={savingNote}
+            >
+              <X size={12} style={{ marginRight: 3 }} /> Cancel
+            </button>
+            <button
+              onClick={saveNote}
+              disabled={savingNote}
+              style={{ ...primaryBtnStyle, display: "flex", alignItems: "center", gap: 4 }}
+            >
+              <Check size={12} /> {savingNote ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Customer Notes Card
+// ─────────────────────────────────────────────────────────────────────────────
+
+function CustomerNotesCard({
+  customerId,
+  initialNotes,
+}: {
+  customerId: string;
+  initialNotes: string | null;
+}) {
+  const [notes, setNotes] = useState(initialNotes ?? "");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(notes);
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/customers/${customerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: draft }),
+      });
+      if (res.ok) {
+        setNotes(draft);
+        setEditing(false);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function clearNotes() {
+    if (!confirm("Remove this note?")) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/customers/${customerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: "" }),
+      });
+      if (res.ok) {
+        setNotes("");
+        setDraft("");
+        setEditing(false);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div style={{
+      background: "var(--card)", border: "1px solid var(--border)",
+      borderRadius: 12, padding: "18px 22px", marginBottom: 20,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: editing || notes ? 12 : 0 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+          <FileText size={14} color="var(--primary)" /> Staff Notes
+        </h3>
+        {!editing && (
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={() => { setDraft(notes); setEditing(true); }} style={iconBtnStyle} title="Edit note">
+              <Pencil size={13} />
+            </button>
+            {notes && (
+              <button onClick={clearNotes} disabled={saving} style={{ ...iconBtnStyle, color: "#c45c5c" }} title="Remove note">
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {editing ? (
+        <div>
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Add a note for staff members… e.g. 'Customer paid via IBAN — do not charge again'"
+            rows={3}
+            autoFocus
+            style={{
+              width: "100%", padding: "10px 12px",
+              border: "1px solid var(--border)", borderRadius: 8,
+              background: "var(--background)", fontSize: 13.5,
+              color: "var(--foreground)", outline: "none",
+              resize: "vertical", boxSizing: "border-box",
+              fontFamily: "inherit", lineHeight: 1.6,
+            }}
+          />
+          <div style={{ display: "flex", gap: 8, marginTop: 10, justifyContent: "flex-end" }}>
+            <button onClick={() => setEditing(false)} style={ghostBtnStyle} disabled={saving}>
+              <X size={13} style={{ marginRight: 4 }} /> Cancel
+            </button>
+            <button
+              onClick={save}
+              disabled={saving}
+              style={{ ...primaryBtnStyle, display: "flex", alignItems: "center", gap: 4 }}
+            >
+              <Check size={13} /> {saving ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+      ) : notes ? (
+        <p style={{
+          margin: 0, fontSize: 13.5, lineHeight: 1.65,
+          color: "var(--foreground)",
+          background: "var(--muted)", padding: "12px 14px",
+          borderRadius: 8, borderLeft: "3px solid var(--primary)",
+          whiteSpace: "pre-wrap",
+        }}>
+          {notes}
+        </p>
+      ) : (
+        <button
+          onClick={() => { setDraft(""); setEditing(true); }}
+          style={{
+            width: "100%", padding: "12px",
+            border: "1px dashed var(--border)", borderRadius: 8,
+            background: "transparent", cursor: "pointer",
+            color: "var(--muted-foreground)", fontSize: 13, textAlign: "center",
+          }}
+        >
+          + Add a staff note
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Schedule Next Session Dialog
+// ─────────────────────────────────────────────────────────────────────────────
+
+type PackageForNextSession = {
+  id: string;
+  name: string;
+  remainingSessions: number;
+  totalSessions: number;
+  totalPrice: number;
+  paidAmount: number;
+  service?: { id: string; name: string; price: number; duration: number } | null;
+};
+
+function ScheduleNextSessionDialog({
+  pkg,
+  customerId: _customerId,
+  staffList,
+  onScheduled,
+}: {
+  pkg: PackageForNextSession;
+  customerId: string;
+  staffList: Staff[];
+  onScheduled: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const [dateStr, setDateStr] = useState(tomorrow.toISOString().slice(0, 10));
+  const [timeStr, setTimeStr] = useState("10:00");
+  const [staffId, setStaffId] = useState(staffList?.[0]?.id ?? "");
+  const [installmentAmount, setInstallmentAmount] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  async function handleSchedule() {
+    if (!staffId || !dateStr || !timeStr) return;
+    setSaving(true);
+    setError("");
+    try {
+      const startTime = new Date(`${dateStr}T${timeStr}`).toISOString();
+      const res = await fetch(`/api/packages/${pkg.id}/next-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startTime,
+          staffId,
+          installmentAmount: installmentAmount ? Number(installmentAmount) : 0,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Failed to schedule");
+        return;
+      }
+      setSuccess(true);
+      setTimeout(() => {
+        setOpen(false);
+        setSuccess(false);
+        onScheduled();
+      }, 1200);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          padding: "6px 14px", borderRadius: 8,
+          border: "1px solid var(--primary)", background: "transparent",
+          color: "var(--primary)", fontSize: 12.5, fontWeight: 500, cursor: "pointer",
+        }}
+      >
+        <CalendarClock size={13} />
+        Schedule Next Session
+        <span style={{
+          background: "var(--primary)", color: "white",
+          borderRadius: 10, padding: "1px 6px", fontSize: 11,
+        }}>
+          {pkg.remainingSessions} left
+        </span>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+          }}
+          onClick={() => !saving && setOpen(false)}
+        >
+          <div
+            style={{
+              background: "var(--card)", border: "1px solid var(--border)",
+              borderRadius: 14, padding: "28px 32px",
+              width: 440, maxWidth: "90vw",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
+              Schedule Next Session
+            </h3>
+            <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", marginBottom: 4 }}>
+              {pkg.name}
+            </p>
+            {pkg.service && (
+              <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", marginBottom: 20 }}>
+                Service: <strong>{pkg.service.name}</strong> · {pkg.service.duration} min
+              </p>
+            )}
+
+            {success ? (
+              <div style={{ padding: "24px", textAlign: "center", color: "#2d7a2d", fontSize: 15, fontWeight: 500 }}>
+                ✓ Session scheduled!
+              </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={labelStyle}>Date</label>
+                  <input type="date" value={dateStr} onChange={(e) => setDateStr(e.target.value)} style={fullInputStyle} />
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={labelStyle}>Time</label>
+                  <input type="time" value={timeStr} onChange={(e) => setTimeStr(e.target.value)} style={fullInputStyle} />
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={labelStyle}>Staff Member</label>
+                  <select value={staffId} onChange={(e) => setStaffId(e.target.value)} style={fullInputStyle}>
+                    {staffList?.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={labelStyle}>Payment Now (optional)</label>
+                  <input
+                    type="number" min={0} placeholder="₺0"
+                    value={installmentAmount}
+                    onChange={(e) => setInstallmentAmount(e.target.value)}
+                    style={fullInputStyle}
+                  />
+                </div>
+
+                {/* Package balance summary */}
+                <div style={{
+                  background: "var(--muted)", borderRadius: 8, padding: "10px 14px",
+                  marginBottom: 16, fontSize: 12.5, color: "var(--muted-foreground)",
+                  display: "flex", justifyContent: "space-between",
+                }}>
+                  <span>{pkg.remainingSessions}/{pkg.totalSessions} sessions left</span>
+                  <span>Paid: ₺{pkg.paidAmount} / ₺{pkg.totalPrice}</span>
+                </div>
+
+                {error && (
+                  <p style={{ color: "#c0392b", fontSize: 12.5, marginBottom: 12 }}>{error}</p>
+                )}
+
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <button onClick={() => setOpen(false)} style={ghostBtnStyle} disabled={saving}>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSchedule}
+                    disabled={saving || !staffId}
+                    style={{ ...primaryBtnStyle, opacity: saving ? 0.7 : 1 }}
+                  >
+                    {saving ? "Scheduling…" : "Schedule"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared styles
+// ─────────────────────────────────────────────────────────────────────────────
+
+const iconBtnStyle: React.CSSProperties = {
+  padding: "5px 6px", background: "var(--muted)",
+  border: "1px solid var(--border)", borderRadius: 6,
+  cursor: "pointer", display: "flex", alignItems: "center",
+  color: "var(--muted-foreground)",
+};
+
+const ghostBtnStyle: React.CSSProperties = {
+  padding: "7px 16px", borderRadius: 8,
+  border: "1px solid var(--border)", background: "transparent",
+  cursor: "pointer", fontSize: 13, color: "var(--foreground)",
+  display: "flex", alignItems: "center",
+};
+
+const primaryBtnStyle: React.CSSProperties = {
+  padding: "7px 16px", borderRadius: 8,
+  border: "none", background: "var(--primary)",
+  color: "white", cursor: "pointer",
+  fontSize: 13, fontWeight: 500,
+};
+
+const labelStyle: React.CSSProperties = {
+  display: "block", fontSize: 12, fontWeight: 600,
+  color: "var(--muted-foreground)", marginBottom: 6,
+  textTransform: "uppercase", letterSpacing: "0.04em",
+};
+
+const fullInputStyle: React.CSSProperties = {
+  width: "100%", padding: "8px 12px",
+  border: "1px solid var(--border)", borderRadius: 8,
+  background: "var(--card)", fontSize: 13,
+  color: "var(--foreground)", outline: "none",
+  boxSizing: "border-box",
+};

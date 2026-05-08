@@ -27,14 +27,13 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
 
-    // Handle COMPLETED status with atomic transaction
+    // ── COMPLETED — atomic transaction ────────────────────────────────
     if (body.status === "COMPLETED") {
       const installmentAmount = body.installmentAmount
         ? Number(body.installmentAmount)
         : 0;
 
       const appointment = await prisma.$transaction(async (tx) => {
-        // 1. Fetch current appointment to check if it has a package
         const current = await tx.appointment.findUnique({
           where: { id },
           select: { userPackageId: true, status: true },
@@ -43,14 +42,12 @@ export async function PATCH(
         if (!current) throw new Error("Appointment not found");
         if (current.status === "COMPLETED") throw new Error("Already completed");
 
-        // 2. Mark appointment as completed
         const updated = await tx.appointment.update({
           where: { id },
           data: { status: "COMPLETED" },
           include: { service: true, staff: true, customer: true, userPackage: true },
         });
 
-        // 3. If linked to a package, decrement remaining sessions + record installment
         if (current.userPackageId) {
           const pkg = await tx.userPackage.findUnique({
             where: { id: current.userPackageId },
@@ -73,7 +70,7 @@ export async function PATCH(
               data: {
                 userPackageId: current.userPackageId,
                 amount: installmentAmount,
-                note: `Session payment`,
+                note: "Session payment",
               },
             });
           }
@@ -85,12 +82,71 @@ export async function PATCH(
       return NextResponse.json(appointment);
     }
 
-    // Non-COMPLETED status updates (e.g. CANCELLED, rescheduling)
+    // ── POSTPONE — reschedule startTime with overlap check ────────────
+    if (body.action === "POSTPONE") {
+      if (!body.startTime) {
+        return NextResponse.json({ error: "startTime is required to postpone" }, { status: 400 });
+      }
+
+      const newStart = new Date(body.startTime);
+
+      // Fetch current appointment to get staffId and service duration
+      const current = await prisma.appointment.findUnique({
+        where: { id },
+        include: { service: true },
+      });
+      if (!current) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+      const newEnd = new Date(newStart.getTime() + current.service.duration * 60 * 1000);
+      const longestService = await prisma.service.findFirst({
+        orderBy: { duration: "desc" },
+        select: { duration: true },
+      });
+      const maxDuration = longestService?.duration ?? 120;
+
+      const conflict = await prisma.appointment.findFirst({
+        where: {
+          staffId: current.staffId,
+          status: { not: "CANCELLED" },
+          id: { not: id }, // exclude self
+          startTime: {
+            lt: newEnd,
+            gt: new Date(newStart.getTime() - maxDuration * 60 * 1000),
+          },
+        },
+        include: { service: true },
+      });
+
+      if (conflict) {
+        const conflictEnd = new Date(
+          conflict.startTime.getTime() + conflict.service.duration * 60 * 1000
+        );
+        if (conflict.startTime < newEnd && conflictEnd > newStart) {
+          return NextResponse.json(
+            { error: "Bu personel üyesi zaten o zaman diliminde bir randevusu var." },
+            { status: 409 }
+          );
+        }
+      }
+
+      const data: Record<string, unknown> = { startTime: newStart };
+      if (body.notes !== undefined) data.notes = body.notes || null;
+
+      const appointment = await prisma.appointment.update({
+        where: { id },
+        data,
+        include: { service: true, staff: true, customer: true, userPackage: true },
+      });
+      return NextResponse.json(appointment);
+    }
+
+    // ── General updates (status, notes) ──────────────────────────────
     const data: Record<string, unknown> = {};
     if (body.startTime !== undefined) data.startTime = new Date(body.startTime);
     if (body.serviceId !== undefined) data.serviceId = body.serviceId;
     if (body.staffId !== undefined) data.staffId = body.staffId;
     if (body.status !== undefined) data.status = body.status;
+    if (body.notes !== undefined) data.notes = body.notes || null;
 
     const appointment = await prisma.appointment.update({
       where: { id },

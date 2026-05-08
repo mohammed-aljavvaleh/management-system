@@ -17,6 +17,7 @@ export async function GET(
         },
         packages: {
           include: {
+            service: true, // now included so "Schedule Next Session" knows the service
             installments: { orderBy: { paidAt: "desc" } },
             _count: { select: { appointments: true } },
           },
@@ -45,7 +46,9 @@ export async function PATCH(
     const body = await req.json();
 
     const data: Record<string, unknown> = {};
+
     if (body.name !== undefined) data.name = String(body.name).trim();
+
     if (body.phone !== undefined) {
       const digits = String(body.phone).replace(/\D/g, "");
       if (!digits.startsWith("05") || digits.length !== 11) {
@@ -55,6 +58,11 @@ export async function PATCH(
         );
       }
       data.phone = digits;
+    }
+
+    // notes: allow setting, clearing (empty string → null), or removing
+    if (body.notes !== undefined) {
+      data.notes = body.notes === "" ? null : String(body.notes).trim();
     }
 
     const customer = await prisma.customer.update({ where: { id }, data });
