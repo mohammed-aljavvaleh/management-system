@@ -396,7 +396,7 @@ export function AppointmentForm({ services, staff }: Props) {
           {selectedService && (
             <section style={sectionStyle}>
               <h2 style={sectionTitleStyle}>
-                <Package size={15} color="var(--primary)" /> {t.appointmentForm.packages}
+                <Package size={15} color="var(--primary)" /> {t.appointmentForm.packagePricing}
               </h2>
               <div style={{ display: "grid", gap: 18 }}>
 
@@ -566,7 +566,7 @@ export function AppointmentForm({ services, staff }: Props) {
             }}>
               <span>
                 <strong>{selectedService.name}</strong>
-                {isPackage ? ` · ${sessions} sessions` : ` · ${selectedService.duration} ${t.services.min}`}
+                {isPackage ? ` · ${sessions} ${t.appointmentForm.packages}` : ` · ${selectedService.duration} ${t.services.min}`}
                 {date && time && (() => {
                   const d = new Date(`${date}T${time}:00`);
                   const months = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
@@ -577,7 +577,7 @@ export function AppointmentForm({ services, staff }: Props) {
                 <div style={{ fontWeight: 600, fontSize: 16 }}>₺{totalPrice.toFixed(2)}</div>
                 {isPackage && installmentAmount !== "" && (
                   <div style={{ fontSize: 11, opacity: 0.8 }}>
-                    ₺{Number(installmentAmount).toFixed(2)} paid now
+                    ₺{Number(installmentAmount).toFixed(2)} {t.appointmentForm.paidNow}
                   </div>
                 )}
               </div>
@@ -621,10 +621,7 @@ export function AppointmentForm({ services, staff }: Props) {
 }
 
 function formatTime(slot: string) {
-  const [h, m] = slot.split(":").map(Number);
-  const ampm = h >= 12 ? "ÖS" : "ÖÖ";
-  const h12 = h % 12 || 12;
-  return `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
+  return slot;
 }
 
 const sectionStyle: React.CSSProperties = {

@@ -220,7 +220,7 @@ export function CustomerProfileClient({
                         {pkg.installments.map((inst) => (
                           <div key={inst.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                             <span style={{ color: "var(--muted-foreground)" }}>
-                              {fmt(inst.paidAt, "d MMM yyyy")}
+                              {fmt(inst.paidAt, "dd MMMM yyyy")}
                               {inst.note && ` · ${inst.note}`}
                             </span>
                             <strong style={{ color: "var(--primary)" }}>₺{inst.amount.toFixed(2)}</strong>
@@ -265,6 +265,7 @@ export function CustomerProfileClient({
                   statusLabel={statusLabel}
                   fmt={fmt}
                   packageBadgeLabel={t.customers.packageBadge}
+                  t={t}
                 />
               );
             })}
@@ -294,7 +295,7 @@ export function CustomerProfileClient({
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: 13.5, fontWeight: 600 }}>₺{pkg.paidAmount.toFixed(2)}</div>
-                  <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>of ₺{pkg.totalPrice.toFixed(2)}</div>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{t.customers.ofTotal} ₺{pkg.totalPrice.toFixed(2)}</div>
                 </div>
               </div>
             ))}
@@ -326,12 +327,14 @@ function AppointmentHistoryRow({
   statusLabel,
   fmt,
   packageBadgeLabel,
+  t,
 }: {
   appt: ApptRow;
   statusColor: string;
   statusLabel: string;
   fmt: (d: Date | string, p: string) => string;
   packageBadgeLabel: string;
+  t: any;
 }) {
   const [notes, setNotes] = useState(appt.notes ?? "");
   const [editingNote, setEditingNote] = useState(false);
@@ -368,7 +371,7 @@ function AppointmentHistoryRow({
           <div>
             <div style={{ fontWeight: 500, fontSize: 13.5 }}>{appt.service.name}</div>
             <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>
-              {fmt(appt.startTime, "d MMM yyyy")} · {fmt(appt.startTime, "HH:mm")} · {appt.staff.name}
+              {fmt(appt.startTime, "dd MMMM yyyy")} · {fmt(appt.startTime, "HH:mm")} · {appt.staff.name}
               {appt.userPackage && (
                 <span style={{ marginLeft: 8, padding: "1px 7px", background: "var(--primary-light)", color: "var(--primary)", borderRadius: 10, fontSize: 11 }}>
                   {packageBadgeLabel}
@@ -418,7 +421,7 @@ function AppointmentHistoryRow({
           <textarea
             value={noteDraft}
             onChange={(e) => setNoteDraft(e.target.value)}
-            placeholder="Add a note about this appointment…"
+            placeholder={t.appointments.noteDialogPlaceholder}
             rows={2}
             autoFocus
             style={{
@@ -436,14 +439,14 @@ function AppointmentHistoryRow({
               style={ghostBtnStyle}
               disabled={savingNote}
             >
-              <X size={12} style={{ marginRight: 3 }} /> Cancel
+              <X size={12} style={{ marginRight: 3 }} /> {t.common.cancel}
             </button>
             <button
               onClick={saveNote}
               disabled={savingNote}
               style={{ ...primaryBtnStyle, display: "flex", alignItems: "center", gap: 4 }}
             >
-              <Check size={12} /> {savingNote ? "Saving…" : "Save"}
+              <Check size={12} /> {savingNote ? t.appointments.saving : t.common.save}
             </button>
           </div>
         </div>
@@ -463,6 +466,7 @@ function CustomerNotesCard({
   customerId: string;
   initialNotes: string | null;
 }) {
+  const { t } = useLang();
   const [notes, setNotes] = useState(initialNotes ?? "");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(notes);
@@ -486,7 +490,7 @@ function CustomerNotesCard({
   }
 
   async function clearNotes() {
-    if (!confirm("Remove this note?")) return;
+    if (!confirm(t.customers.removeNoteConfirm)) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/customers/${customerId}`, {
@@ -511,7 +515,7 @@ function CustomerNotesCard({
     }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: editing || notes ? 12 : 0 }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
-          <FileText size={14} color="var(--primary)" /> Staff Notes
+          <FileText size={14} color="var(--primary)" /> {t.customers.staffNotes}
         </h3>
         {!editing && (
           <div style={{ display: "flex", gap: 6 }}>
@@ -532,7 +536,7 @@ function CustomerNotesCard({
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Add a note for staff members… e.g. 'Customer paid via IBAN — do not charge again'"
+            placeholder={t.customers.staffNotePlaceholder}
             rows={3}
             autoFocus
             style={{
@@ -546,14 +550,14 @@ function CustomerNotesCard({
           />
           <div style={{ display: "flex", gap: 8, marginTop: 10, justifyContent: "flex-end" }}>
             <button onClick={() => setEditing(false)} style={ghostBtnStyle} disabled={saving}>
-              <X size={13} style={{ marginRight: 4 }} /> Cancel
+              <X size={13} style={{ marginRight: 4 }} /> {t.common.cancel}
             </button>
             <button
               onClick={save}
               disabled={saving}
               style={{ ...primaryBtnStyle, display: "flex", alignItems: "center", gap: 4 }}
             >
-              <Check size={13} /> {saving ? "Saving…" : "Save"}
+              <Check size={13} /> {saving ? t.appointments.saving : t.common.save}
             </button>
           </div>
         </div>
@@ -577,7 +581,7 @@ function CustomerNotesCard({
             color: "var(--muted-foreground)", fontSize: 13, textAlign: "center",
           }}
         >
-          + Add a staff note
+          {t.customers.addStaffNote}
         </button>
       )}
     </div>
@@ -607,6 +611,7 @@ function ScheduleNextSessionDialog({
   staffList: Staff[];
   onScheduled: () => void;
 }) {
+  const { t } = useLang();
   const [open, setOpen] = useState(false);
 
   const tomorrow = new Date();
@@ -663,12 +668,12 @@ function ScheduleNextSessionDialog({
         }}
       >
         <CalendarClock size={13} />
-        Schedule Next Session
+        {t.customers.scheduleNext}
         <span style={{
           background: "var(--primary)", color: "white",
           borderRadius: 10, padding: "1px 6px", fontSize: 11,
         }}>
-          {pkg.remainingSessions} left
+          {pkg.remainingSessions} {t.customers.sessionsLeftBadge}
         </span>
       </button>
 
@@ -691,33 +696,33 @@ function ScheduleNextSessionDialog({
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
-              Schedule Next Session
+              {t.customers.scheduleNext}
             </h3>
             <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", marginBottom: 4 }}>
               {pkg.name}
             </p>
             {pkg.service && (
               <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", marginBottom: 20 }}>
-                Service: <strong>{pkg.service.name}</strong> · {pkg.service.duration} min
+                {t.appointmentForm.service} <strong>{pkg.service.name}</strong> · {pkg.service.duration} {t.services.min}
               </p>
             )}
 
             {success ? (
               <div style={{ padding: "24px", textAlign: "center", color: "#2d7a2d", fontSize: 15, fontWeight: 500 }}>
-                ✓ Session scheduled!
+                {t.customers.sessionScheduled}
               </div>
             ) : (
               <>
                 <div style={{ marginBottom: 14 }}>
-                  <label style={labelStyle}>Date</label>
+                  <label style={labelStyle}>{t.appointmentForm.date}</label>
                   <input type="date" value={dateStr} onChange={(e) => setDateStr(e.target.value)} style={fullInputStyle} />
                 </div>
                 <div style={{ marginBottom: 14 }}>
-                  <label style={labelStyle}>Time</label>
+                  <label style={labelStyle}>{t.appointmentForm.timeSlot}</label>
                   <input type="time" value={timeStr} onChange={(e) => setTimeStr(e.target.value)} style={fullInputStyle} />
                 </div>
                 <div style={{ marginBottom: 14 }}>
-                  <label style={labelStyle}>Staff Member</label>
+                  <label style={labelStyle}>{t.appointmentForm.staffMember}</label>
                   <select value={staffId} onChange={(e) => setStaffId(e.target.value)} style={fullInputStyle}>
                     {staffList?.map((s) => (
                       <option key={s.id} value={s.id}>{s.name}</option>
@@ -725,7 +730,7 @@ function ScheduleNextSessionDialog({
                   </select>
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={labelStyle}>Payment Now (optional)</label>
+                  <label style={labelStyle}>{t.customers.paymentNow}</label>
                   <input
                     type="number" min={0} placeholder="₺0"
                     value={installmentAmount}
@@ -740,8 +745,12 @@ function ScheduleNextSessionDialog({
                   marginBottom: 16, fontSize: 12.5, color: "var(--muted-foreground)",
                   display: "flex", justifyContent: "space-between",
                 }}>
-                  <span>{pkg.remainingSessions}/{pkg.totalSessions} sessions left</span>
-                  <span>Paid: ₺{pkg.paidAmount} / ₺{pkg.totalPrice}</span>
+                  <span>
+                   {t.customers.sessionsLeftSummary
+                     .replace("{remaining}", String(pkg.remainingSessions))
+                     .replace("{total}", String(pkg.totalSessions))}
+                 </span>
+                 <span>{t.customers.paidSummary}: ₺{pkg.paidAmount} / ₺{pkg.totalPrice}</span>
                 </div>
 
                 {error && (
@@ -750,14 +759,14 @@ function ScheduleNextSessionDialog({
 
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                   <button onClick={() => setOpen(false)} style={ghostBtnStyle} disabled={saving}>
-                    Cancel
+                    {t.common.cancel}
                   </button>
                   <button
                     onClick={handleSchedule}
                     disabled={saving || !staffId}
                     style={{ ...primaryBtnStyle, opacity: saving ? 0.7 : 1 }}
                   >
-                    {saving ? "Scheduling…" : "Schedule"}
+                    {saving ? t.appointmentForm.scheduling : t.appointmentForm.schedule}
                   </button>
                 </div>
               </>

@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { CalendarDays, TurkishLira, Clock, IdCardLanyard, Scissors, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useLang } from "@/components/providers/language-provider";
+import { tr, enUS } from "date-fns/locale";
 
 type Appointment = {
   id: string;
@@ -30,7 +31,7 @@ export function DashboardClient({
   servicesCount,
   staffCount,
 }: Props) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
 
   const completed = todayAppointments.filter((a) => a.status === "COMPLETED").length;
   const cancelled = todayAppointments.filter((a) => a.status === "CANCELLED").length;
@@ -72,7 +73,7 @@ export function DashboardClient({
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
         <p style={{ color: "var(--muted-foreground)", fontSize: 13, marginBottom: 4 }}>
-          {format(new Date(), "EEEE, MMMM d, yyyy")}
+          {format(new Date(), "EEEE, d MMMM yyyy", { locale: lang === "tr" ? tr : enUS })}
         </p>
         <h1 style={{ fontFamily: "var(--font-display)", fontSize: 32, fontWeight: 500, color: "var(--foreground)" }}>
           {getGreeting(t)}
@@ -176,12 +177,9 @@ export function DashboardClient({
                 }}
               >
                 <div style={{ width: 64, flexShrink: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 500 }}>
-                    {format(new Date(appt.startTime), "hh:mm")}
-                  </div>
-                  <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                    {format(new Date(appt.startTime), "a")}
-                  </div>
+                 <div style={{ fontSize: 13.5, fontWeight: 500 }}>
+                  {format(new Date(appt.startTime), "HH:mm")}
+                </div>
                 </div>
 
                 <div style={{
@@ -214,7 +212,9 @@ export function DashboardClient({
                   className={`status-${appt.status.toLowerCase()}`}
                   style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 500, textTransform: "capitalize" }}
                 >
-                  {appt.status.toLowerCase()}
+                  {appt.status === "SCHEDULED" ? t.appointments.statuses.scheduled
+                  : appt.status === "COMPLETED" ? t.appointments.statuses.completed
+                  : t.appointments.statuses.cancelled}
                 </span>
               </div>
             ))}

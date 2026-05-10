@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useLang } from "@/components/providers/language-provider";
+import { tr, enUS } from "date-fns/locale";
 
 type Service = { id: string; name: string; price: number; duration: number };
 type Staff = { id: string; name: string; role: string };
@@ -65,7 +66,7 @@ function PostponeDialog({
   onClose: () => void;
   onSaved: (updated: Appointment) => void;
 }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const current = new Date(appt.startTime);
   const [dateStr, setDateStr] = useState(format(current, "yyyy-MM-dd"));
   const [timeStr, setTimeStr] = useState(format(current, "HH:mm"));
@@ -230,7 +231,7 @@ export function AppointmentsClient({
   initialAppointments,
   staff,
 }: Props) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
 
   const MONTHS = [
     t.months.january, t.months.february, t.months.march, t.months.april,
@@ -619,7 +620,7 @@ export function AppointmentsClient({
                   }}
                 >
                   <span style={{ fontWeight: 500 }}>
-                    {format(new Date(appt.startTime), "MMM d, h:mm a")}
+                    {format(new Date(appt.startTime), "dd MMMM, HH:mm", { locale: lang === "tr" ? tr : enUS })}
                   </span>
                   <div>
                     <div style={{ fontWeight: 500 }}>{appt.customer.name}</div>
@@ -763,7 +764,7 @@ function AppointmentCard({
         <div>
           <div style={{ fontWeight: 500, fontSize: 13.5 }}>{appt.customer.name}</div>
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-            {format(new Date(appt.startTime), "h:mm a")} · {appt.service.name}
+            {format(new Date(appt.startTime), "HH:mm")} · {appt.service.name}
           </div>
           {appt.notes && (
             <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", fontStyle: "italic", marginTop: 3 }}>

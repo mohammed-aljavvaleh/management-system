@@ -4,6 +4,9 @@ import { useState, useMemo } from "react";
 import { format, isToday, isTomorrow, isYesterday } from "date-fns";
 import { CheckCircle, XCircle, Clock, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLang } from "@/components/providers/language-provider";
+
+const { t } = useLang();
 
 type Appointment = {
   id: string;
@@ -121,7 +124,7 @@ export function MobileAppointmentsClient({ initialAppointments }: Props) {
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         {grouped.length === 0 && (
           <div className="text-center text-zinc-400 text-sm py-12">
-            No appointments found
+            {t.appointments.noAppointments}
           </div>
         )}
         {grouped.map(([dateKey, items]) => (
