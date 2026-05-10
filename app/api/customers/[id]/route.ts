@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/require-auth";
 
 export async function GET(
   _: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauth = await requireAuth();
+  if (unauth) return unauth;
   try {
     const { id } = await params;
 
@@ -41,6 +44,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauth = await requireAuth();
+  if (unauth) return unauth;
   try {
     const { id } = await params;
     const body = await req.json();

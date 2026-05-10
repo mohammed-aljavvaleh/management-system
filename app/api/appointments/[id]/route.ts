@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requireAuth } from "@/lib/require-auth";
 
 export async function GET(
   _: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauth = await requireAuth();
+  if (unauth) return unauth;
   try {
     const { id } = await params;
     const appointment = await prisma.appointment.findUnique({
@@ -24,6 +27,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauth = await requireAuth();
+  if (unauth) return unauth;
   try {
     const { id } = await params;
     const body = await req.json();
@@ -169,6 +174,8 @@ export async function DELETE(
   _: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauth = await requireAuth();
+  if (unauth) return unauth;
   try {
     const { id } = await params;
     await prisma.appointment.delete({ where: { id } });

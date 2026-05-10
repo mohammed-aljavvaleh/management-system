@@ -2,11 +2,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/require-auth";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauth = await requireAuth();
+  if (unauth) return unauth;
   try {
     const { id: packageId } = await params;
     const body = await req.json();
