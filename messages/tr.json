@@ -1,4 +1,14 @@
 {
+  "login": {
+    "title": "Lamees Nail Salon",
+    "subtitle": "Devam etmek için lütfen giriş yapın",
+    "user": "KULLANICI ADI",
+    "pass": "PAROLA",
+    "signIn": "Giriş Yap",
+    "loading": "Giriş yapılıyor...",
+    "incomplete": "Eksik alanlar",
+    "error": "Geçersiz kullanıcı adı veya parola"
+  },
   "nav": {
     "dashboard": "Panel",
     "appointments": "Randevular",
@@ -6,7 +16,8 @@
     "staff": "Personel",
     "reports": "Raporlar",
     "adminPanel": "Yönetim Paneli",
-    "customers": "Müşteriler"
+    "customers": "Müşteriler",
+    "signOut": "Çıkış Yap"
   },
   "dashboard": {
     "greeting_morning": "Günaydın, Admin",
@@ -79,7 +90,19 @@
     "status": "Durum",
     "complete": "Tamamla",
     "cancel": "İptal Et",
+    "postponeAppt": "Randevuyu Ertele",
+    "newDate": "Yeni Tarih",
+    "newTime": "Yeni Saat",
+    "note": "Not (isteğe bağlı)",
+    "addNote": "Not Ekle",
+    "ApptNote": "Randevu Notu",
+    "editNote": "Notu Düzenle",
+    "Postpone": "Ertele",
     "deleteConfirm": "Bu randevu silinsin mi?",
+    "postpone": "Ertele",
+    "noteDialogPlaceholder": "Bu randevu hakkında bir not ekleyin…",
+    "saveNote": "Notu Kaydet",
+    "saving": "Kaydediliyor...",
     "statuses": {
       "scheduled": "Planlandı",
       "completed": "Tamamlandı",

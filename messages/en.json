@@ -1,4 +1,14 @@
 {
+  "login": {
+    "title": "Lamees Nail Salon",
+    "subtitle": "Please sign in to continue",
+    "user": "USERNAME",
+    "pass": "PASSWORD",
+    "signIn": "Sign In",
+    "loading": "Signing in...",
+    "incomplete": "Missing fields",
+    "error": "Invalid username or password"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "appointments": "Appointments",
@@ -6,7 +16,8 @@
     "staff": "Staff",
     "reports": "Reports",
     "adminPanel": "Admin Panel",
-    "customers": "Customers"
+    "customers": "Customers",
+    "signOut": "Sign Out"
   },
   "dashboard": {
     "greeting_morning": "Good morning, Admin",
@@ -51,7 +62,19 @@
     "status": "Status",
     "complete": "Complete",
     "cancel": "Cancel",
+    "postponeAppt": "Postpone Appointment",
+    "newDate": "New Date",
+    "newTime": "New Time",
+    "note": "Note (optional)",
+    "addNote": "Add Note",
+    "editNote": "Edit Note",
+    "ApptNote": "Appointment Note",
+    "postpone": "Postpone",
     "deleteConfirm": "Delete this appointment?",
+    "postponeNotePlaceholder": "e.g. Client postponed twice, call to confirm…",
+    "noteDialogPlaceholder": "Add a note about this appointment…",
+    "saveNote": "Save Note",
+    "saving": "Saving...",
     "statuses": {
       "scheduled": "Scheduled",
       "completed": "Completed",

@@ -65,6 +65,7 @@ function PostponeDialog({
   onClose: () => void;
   onSaved: (updated: Appointment) => void;
 }) {
+  const { t } = useLang();
   const current = new Date(appt.startTime);
   const [dateStr, setDateStr] = useState(format(current, "yyyy-MM-dd"));
   const [timeStr, setTimeStr] = useState(format(current, "HH:mm"));
@@ -99,14 +100,14 @@ function PostponeDialog({
     <div style={overlayStyle} onClick={onClose}>
       <div className="admin-modal" style={dialogStyle} onClick={(e) => e.stopPropagation()}>
         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
-          Postpone Appointment
+          {t.appointments.postponeAppt}
         </h3>
         <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", marginBottom: 20 }}>
-          {appt.customer.name} · {appt.service.name}
+          {appt.customer.name}  |  {appt.service.name}  |  {appt.staff.name}
         </p>
 
         <div style={fieldGroup}>
-          <label style={labelStyle}>New Date</label>
+          <label style={labelStyle}>{t.appointments.newDate}</label>
           <input
             type="date"
             value={dateStr}
@@ -115,7 +116,7 @@ function PostponeDialog({
           />
         </div>
         <div style={fieldGroup}>
-          <label style={labelStyle}>New Time</label>
+          <label style={labelStyle}>{t.appointments.newTime}</label>
           <input
             type="time"
             value={timeStr}
@@ -124,11 +125,11 @@ function PostponeDialog({
           />
         </div>
         <div style={fieldGroup}>
-          <label style={labelStyle}>Note (optional)</label>
+          <label style={labelStyle}>{t.appointments.note}</label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="e.g. Client postponed twice — charge extra ₺150"
+            placeholder={t.appointments.postponeNotePlaceholder}
             rows={3}
             style={{ ...inputStyle, resize: "vertical" }}
           />
@@ -169,6 +170,7 @@ function NotesDialog({
   onClose: () => void;
   onSaved: (updated: Appointment) => void;
 }) {
+  const { t } = useLang();
   const [notes, setNotes] = useState(appt.notes ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -194,7 +196,7 @@ function NotesDialog({
     <div style={overlayStyle} onClick={onClose}>
       <div className="admin-modal" style={dialogStyle} onClick={(e) => e.stopPropagation()}>
         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
-          Appointment Note
+          {t.appointments.ApptNote}
         </h3>
         <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", marginBottom: 20 }}>
           {appt.customer.name} · {format(new Date(appt.startTime), "MMM d, h:mm a")}
@@ -202,19 +204,19 @@ function NotesDialog({
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Add a note about this appointment…"
+          placeholder={t.appointments.noteDialogPlaceholder}
           rows={4}
           style={{ ...inputStyle, resize: "vertical", marginBottom: 16 }}
           autoFocus
         />
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button onClick={onClose} style={ghostBtnStyle}>Cancel</button>
+          <button onClick={onClose} style={ghostBtnStyle}> {t.common.cancel}</button>
           <button
             onClick={handleSave}
             disabled={saving}
             style={{ ...primaryBtnStyle, opacity: saving ? 0.7 : 1 }}
           >
-            {saving ? "Saving…" : "Save Note"}
+            {saving ? t.appointments.saving : t.appointments.saveNote}
           </button>
         </div>
       </div>
@@ -503,13 +505,13 @@ export function AppointmentsClient({
                 {selectedDate ? format(selectedDate, "EEEE, MMMM d") : "Select a day"}
               </h3>
               <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>
-                {selectedDayAppts.length} appointment{selectedDayAppts.length !== 1 ? "s" : ""}
+                {selectedDayAppts.length} {selectedDayAppts.length !== 1 ? t.appointments.appointments : t.appointments.appointment}
               </p>
             </div>
             <div className="admin-day-panel" style={{ overflowY: "auto", maxHeight: 500 }}>
               {selectedDayAppts.length === 0 ? (
                 <div style={{ padding: "32px 20px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
-                  No appointments
+                  {t.appointments.noAppointments}
                 </div>
               ) : (
                 selectedDayAppts.map((appt) => (
@@ -628,7 +630,7 @@ export function AppointmentsClient({
                     )}
                     {appt.notes && (
                       <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", fontStyle: "italic", marginTop: 2 }}>
-                        📝 {appt.notes}
+                        {appt.notes}
                       </div>
                     )}
                   </div>
@@ -683,7 +685,7 @@ export function AppointmentsClient({
 
                     {/* Notes button */}
                     <button
-                      title={appt.notes ? "Edit note" : "Add note"}
+                      title={appt.notes ? t.appointments.editNote : t.appointments.addNote}
                       onClick={() => setNotesAppt(appt)}
                       style={{
                         background: "none",
@@ -765,7 +767,7 @@ function AppointmentCard({
           </div>
           {appt.notes && (
             <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", fontStyle: "italic", marginTop: 3 }}>
-              📝 {appt.notes}
+              {appt.notes}
             </div>
           )}
         </div>
@@ -796,7 +798,7 @@ function AppointmentCard({
                 onClick={onPostpone}
                 style={{ ...smallBtnStyle, color: "#5a4a00", background: "#fef9e7", display: "flex", alignItems: "center", gap: 4 }}
               >
-                <CalendarClock size={11} /> Postpone
+                <CalendarClock size={11} /> {t.appointments.postpone}
               </button>
             </>
           )}
@@ -811,7 +813,7 @@ function AppointmentCard({
               gap: 4,
             }}
           >
-            <FileText size={11} /> {appt.notes ? "Note" : "Add note"}
+            <FileText size={11} /> {appt.notes ? t.appointments.editNote : t.appointments.addNote}
           </button>
         </div>
         <div style={{ fontSize: 13, fontWeight: 500, color: "var(--primary)" }}>

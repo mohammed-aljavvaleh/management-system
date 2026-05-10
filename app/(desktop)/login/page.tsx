@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLang } from "@/components/providers/language-provider";
 
 export default function LoginPage() {
+  const { t } = useLang();
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -54,13 +56,13 @@ export default function LoginPage() {
             Lamees Nail Salon
           </h1>
           <p style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
-            Sign in to continue
+            {t.login.subtitle}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
-            <label style={labelStyle}>Username</label>
+            <label style={labelStyle}>{t.login.user}</label>
             <input
               type="text"
               value={username}
@@ -71,7 +73,7 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label style={labelStyle}>Password</label>
+            <label style={labelStyle}>{t.login.pass}</label>
             <input
               type="password"
               value={password}
@@ -101,7 +103,7 @@ export default function LoginPage() {
               opacity: loading ? 0.7 : 1,
             }}
           >
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? t.login.loading : t.login.signIn}
           </button>
         </form>
       </div>

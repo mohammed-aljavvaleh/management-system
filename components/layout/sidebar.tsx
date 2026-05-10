@@ -153,7 +153,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             }}
           >
             <LogOut size={14} />
-            Sign out
+            {t.nav.signOut}
           </button>
 
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
