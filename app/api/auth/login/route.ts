@@ -21,7 +21,7 @@ function checkRateLimit(ip: string): boolean {
   const record = loginAttempts.get(ip);
 
   if (!record || now > record.resetTime) {
-    loginAttempts.set(ip, { count: 1, resetTime: now + 15 * 60 * 1000 });
+    loginAttempts.set(ip, { count: 1, resetTime: now + 1 * 60 * 1000 });
     return true;
   }
 
