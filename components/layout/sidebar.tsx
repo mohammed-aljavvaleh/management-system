@@ -99,7 +99,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 600,
                 color: "var(--foreground)", lineHeight: 1.1,
               }}>
-                Lamees
+                L&S
               </div>
               <div style={{
                 fontSize: 10, color: "var(--muted-foreground)",
