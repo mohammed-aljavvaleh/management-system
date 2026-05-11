@@ -1,36 +1,160 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nail Salon Admin Panel
+
+A modern admin panel for managing nail salon appointments, customers, services, and staff built with Next.js, Prisma, and PostgreSQL.
+
+## Features
+
+-  Appointment management with conflict detection
+-  Customer management with package tracking
+-  Service catalog management
+-  Staff scheduling
+-  Revenue reports and analytics
+-  Mobile-responsive design
+-  Secure authentication with session management
+
+## Tech Stack
+
+- **Frontend**: Next.js 16, React 19, Tailwind CSS
+- **Backend**: Next.js API Routes
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: Iron Session
+- **Deployment**: Vercel
+- **Database Hosting**: Neon
 
 ## Getting Started
 
-First, run the development server:
+### Local Development
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd lamees-nail-salon-admin
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your local database URL
+   ```
+
+4. **Set up the database**
+   ```bash
+   # Push schema to database
+   npm run db:push
+
+   # Seed with sample data
+   npm run db:seed
+
+   # Create admin user
+   npx tsx scripts/create-admin.ts
+   ```
+
+5. **Start development server**
+   ```bash
+   npm run dev
+   ```
+
+6. **Open [http://localhost:3000](http://localhost:3000)**
+
+
+## Deployment to Vercel + Neon
+
+### 1. Set up Neon Database
+
+1. Go to [Neon Console](https://console.neon.tech/)
+2. Create a new project
+3. Copy the connection string from the dashboard
+
+### 2. Deploy to Vercel
+
+1. **Connect your repository to Vercel**
+   - Go to [Vercel Dashboard](https://vercel.com/dashboard)
+   - Click "New Project"
+   - Import your GitHub repository
+
+2. **Configure environment variables in Vercel**
+   ```
+   DATABASE_URL=postgresql://[user]:[password]@[host]/[database]?sslmode=require
+   SESSION_SECRET=your-secure-random-session-secret-here
+   SESSION_COOKIE_SECURE=true
+   NEXT_PUBLIC_SITE_URL=https://your-app-name.vercel.app
+   ```
+
+3. **Deploy**
+   - Vercel will automatically detect Next.js and run the build
+   - The `postinstall` script will generate Prisma client
+   - The `build` script will push the database schema
+
+### 3. Set up Database Schema
+
+After deployment, run the database setup commands:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Connect to your Vercel project
+npx vercel link
+
+# Push schema to Neon
+npx vercel env pull .env.local
+npm run db:push
+
+# Seed with sample data (optional)
+npm run db:seed
+
+# Create admin user
+npx tsx scripts/create-admin.ts
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `DATABASE_URL` | PostgreSQL connection string | Yes |
+| `SESSION_SECRET` | Random string for session encryption | Yes |
+| `SESSION_COOKIE_SECURE` | Force HTTPS-only cookies | No |
+| `NEXT_PUBLIC_SITE_URL` | Your deployed app URL | No |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Database Schema
 
-## Learn More
+The application uses the following main entities:
+- **Admin**: Authentication users
+- **Customer**: Client information
+- **Service**: Available services
+- **Staff**: Salon employees
+- **Appointment**: Scheduled bookings
+- **UserPackage**: Multi-session packages
+- **Installment**: Payment tracking
 
-To learn more about Next.js, take a look at the following resources:
+## API Routes
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `GET/POST /api/appointments` - Appointment management
+- `GET/POST /api/customers` - Customer management
+- `GET/POST /api/services` - Service management
+- `GET/POST /api/staff` - Staff management
+- `POST /api/auth/login` - Authentication
+- `GET /api/reports` - Analytics and reports
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Security Features
 
-## Deploy on Vercel
+- Rate limiting on login attempts
+- HTTP-only secure cookies
+- CSRF protection
+- Input validation and sanitization
+- SQL injection prevention via Prisma
+- XSS protection headers
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Contributing
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+This project is private and proprietary.
