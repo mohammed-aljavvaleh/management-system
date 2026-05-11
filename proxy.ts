@@ -1,23 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getIronSession } from "iron-session";
-import { SessionData, sessionOptions } from "@/lib/session";
+
+function log(req: NextRequest, status: string, ms: number) {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.nextUrl.pathname} → ${status} (${ms}ms)`);
+}
 
 export async function proxy(req: NextRequest) {
-  const res = NextResponse.next();
-  const session = await getIronSession<SessionData>(req, res, sessionOptions);
-
+  const start = Date.now();
   const isLoginPage = req.nextUrl.pathname === "/login";
   const isAuthApi = req.nextUrl.pathname.startsWith("/api/auth");
 
-  if (!session.adminId && !isLoginPage && !isAuthApi) {
+  if (isAuthApi) {
+    log(req, "PASS (auth api)", Date.now() - start);
+    return NextResponse.next();
+  }
+
+  const hasCookie = req.cookies.has("lamees_session");
+
+  if (!hasCookie && !isLoginPage) {
+    log(req, "REDIRECT /login", Date.now() - start);
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  if (session.adminId && isLoginPage) {
+  if (hasCookie && isLoginPage) {
+    log(req, "REDIRECT /", Date.now() - start);
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  return res;
+  log(req, "PASS", Date.now() - start);
+  return NextResponse.next();
 }
 
 export const config = {
