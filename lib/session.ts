@@ -16,7 +16,7 @@ export const sessionOptions: SessionOptions = {
     ),
     httpOnly: true,
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24, // 24 hours (reduced from 7 days for better security)
     path: "/",
   },
 };

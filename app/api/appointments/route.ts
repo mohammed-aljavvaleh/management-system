@@ -99,6 +99,14 @@ export async function POST(req: NextRequest) {
     const totalPrice = price !== undefined ? Number(price) : service.price * sessionCount;
     const paidNow = installmentAmount ? Number(installmentAmount) : 0;
 
+    // Validate prices
+    if (isNaN(totalPrice) || totalPrice <= 0 || totalPrice > 1000000) {
+      return NextResponse.json({ error: "Invalid total price" }, { status: 400 });
+    }
+    if (paidNow < 0 || paidNow > totalPrice) {
+      return NextResponse.json({ error: "Invalid installment amount" }, { status: 400 });
+    }
+
     // Single session — no package needed
     if (sessionCount === 1) {
       const appointment = await prisma.appointment.create({
