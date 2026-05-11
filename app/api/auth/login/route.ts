@@ -7,7 +7,7 @@ import { getSession } from "@/lib/session";
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
-// Simple in-memory rate limiting (3 attempts per 15 minutes per IP)
+// Simple in-memory rate limiting (3 attempts per 1 minute per IP)
 const loginAttempts = new Map<string, { count: number; resetTime: number }>();
 
 function getClientIp(req: NextRequest): string {
@@ -21,7 +21,7 @@ function checkRateLimit(ip: string): boolean {
   const record = loginAttempts.get(ip);
 
   if (!record || now > record.resetTime) {
-    loginAttempts.set(ip, { count: 1, resetTime: now + 15 * 60 * 1000 });
+    loginAttempts.set(ip, { count: 1, resetTime: now + 1 * 60 * 1000 });
     return true;
   }
 
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
   if (!checkRateLimit(clientIp)) {
     return NextResponse.json(
-      { error: "Too many login attempts. Please try again in 15 minutes." },
+      { error: "Too many login attempts. Please try again in 1 minute." },
       { status: 429 }
     );
   }
