@@ -155,19 +155,29 @@ export function ReportsClient({
                   <div style={{ fontSize: 10, color: "var(--muted-foreground)", height: 16 }}>
                     {totalBookings > 0 ? totalBookings : ""}
                   </div>
-                  <div style={{ width: "100%", display: "flex", flexDirection: "column", minHeight: 4 }}>
+                  <div style={{ width: "100%", display: "flex", gap: 2, alignItems: "flex-end", minHeight: 4 }}>
                     {day.cancelled > 0 && (
-                      <div style={{ width: "100%", height: `${Math.max(cancelPct, 2)}%`, background: "#fde8e8", borderRadius: day.count > 0 ? "2px 2px 0 0" : "4px 4px 0 0", minHeight: 3 }} />
+                      <div
+                        style={{
+                          flex: 1,
+                          height: `${Math.max(cancelPct, 2)}%`,
+                          background: "#fde8e8",
+                          borderRadius: "4px 4px 0 0",
+                          minHeight: 3,
+                          border: "1px solid #fca5a5",
+                        }}
+                        title={`Cancelled: ${day.cancelled}`}
+                      />
                     )}
                     <div
                       style={{
-                        width: "100%",
+                        flex: 1,
                         height: `${Math.max(completedPct, 2)}%`,
                         background: "linear-gradient(to top, #7b9ec9, #a8c4e0)",
-                        borderRadius: day.cancelled > 0 ? "0" : "4px 4px 0 0",
+                        borderRadius: "4px 4px 0 0",
                         minHeight: 4,
-                        flex: 1,
                       }}
+                      title={`Completed: ${day.count}`}
                     />
                   </div>
                   <div style={{ fontSize: 10, color: "var(--muted-foreground)", textAlign: "center" }}>
