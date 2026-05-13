@@ -43,6 +43,7 @@ type Appointment = {
   serviceId: string;
   service: Service;
   staff: Staff;
+  priceAtBooking: number;
   notes?: string | null;
   userPackage?: UserPackage;
 };
@@ -643,7 +644,7 @@ export function AppointmentsClient({
                     {t.services.min}
                   </span>
                   <span style={{ color: "var(--primary)", fontWeight: 500 }}>
-                    ₺{appt.service.price}
+                    ₺{appt.priceAtBooking != null ? appt.priceAtBooking : appt.service.price}
                   </span>
                   <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
                     {/* Status select */}
@@ -818,7 +819,7 @@ function AppointmentCard({
           </button>
         </div>
         <div style={{ fontSize: 13, fontWeight: 500, color: "var(--primary)" }}>
-          ₺{appt.service.price}
+          ₺{appt.priceAtBooking != null ? appt.priceAtBooking : appt.service.price}
         </div>
       </div>
     </div>

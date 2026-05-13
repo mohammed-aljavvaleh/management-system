@@ -30,7 +30,7 @@ export function ReportsClient({
 }: Props) {
   const { t } = useLang();
   const maxRevenue = Math.max(...dailyData.map((d) => d.revenue), 1);
-  const maxCount = Math.max(...dailyData.map((d) => d.count), 1);
+  const maxCount = Math.max(...dailyData.map((d) => d.count + d.cancelled), 1);
   const maxService = Math.max(...topServices.map((s) => s.count), 1);
   const maxStaff = Math.max(...staffPerformance.map((s) => s.count), 1);
 
@@ -145,23 +145,24 @@ export function ReportsClient({
           </h2>
           <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 140 }}>
             {dailyData.map((day) => {
-              const pct = (day.count / maxCount) * 100;
-              const cancelPct = day.cancelled > 0 ? (day.cancelled / (day.count + day.cancelled)) * 100 : 0;
+              const totalBookings = day.count + day.cancelled;
+              const completedPct = (day.count / maxCount) * 100;
+              const cancelPct = (day.cancelled / maxCount) * 100;
               const dayIndex = new Date(day.date + "T12:00:00").getDay();
               const dayLabel = [t.weekDays.sunday, t.weekDays.monday, t.weekDays.tuesday, t.weekDays.wedensday, t.weekDays.thursday, t.weekDays.friday, t.weekDays.saturday][dayIndex];
               return (
                 <div key={day.date} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                   <div style={{ fontSize: 10, color: "var(--muted-foreground)", height: 16 }}>
-                    {day.count > 0 ? day.count : ""}
+                    {totalBookings > 0 ? totalBookings : ""}
                   </div>
                   <div style={{ width: "100%", display: "flex", flexDirection: "column", minHeight: 4 }}>
                     {day.cancelled > 0 && (
-                      <div style={{ width: "100%", height: `${cancelPct}%`, background: "#fde8e8", borderRadius: "2px 2px 0 0", minHeight: 3 }} />
+                      <div style={{ width: "100%", height: `${Math.max(cancelPct, 2)}%`, background: "#fde8e8", borderRadius: day.count > 0 ? "2px 2px 0 0" : "4px 4px 0 0", minHeight: 3 }} />
                     )}
                     <div
                       style={{
                         width: "100%",
-                        height: `${Math.max(pct, 2)}%`,
+                        height: `${Math.max(completedPct, 2)}%`,
                         background: "linear-gradient(to top, #7b9ec9, #a8c4e0)",
                         borderRadius: day.cancelled > 0 ? "0" : "4px 4px 0 0",
                         minHeight: 4,
