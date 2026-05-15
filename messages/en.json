@@ -88,6 +88,8 @@
     "noteDialogPlaceholder": "Add a note about this appointment…",
     "saveNote": "Save Note",
     "saving": "Saving...",
+    "editPrice": "Edit Price",
+    "invalidPrice": "Invalid price",
     "statuses": {
       "scheduled": "Scheduled",
       "completed": "Completed",
@@ -108,6 +110,7 @@
     "packages": "Packages",
     "totalSpent": "Paid",
     "totalOwed": "Owed",
+    "newCustomer": "New Customer",
     "activePackages": "Active Packages",
     "completedPackages": "Completed Packages",
     "noActive": "No active packages",
@@ -264,7 +267,13 @@
     "search": "Search",
     "actions": "actions",
     "AM": "AM",
-    "PM": "PM"
+    "PM": "PM",
+    "name": "Name",
+    "phone": "Phone",
+    "phoneFormat": "11 digits starting with 05",
+    "requiredFields": "All fields are required",
+    "create": "Create",
+    "creating": "Creating..."
   },
   "weekDays": {
     "sunday": "Sun",
