@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { User, Phone, Calendar, Package, Search, X } from "lucide-react";
+import { User, Phone, Calendar, Package, Search, X, Plus } from "lucide-react";
 import { useLang } from "@/components/providers/language-provider";
 
 type Customer = {
@@ -13,9 +13,188 @@ type Customer = {
   packages: { remainingSessions: number; totalSessions: number }[];
 };
 
-export function CustomersClient({ customers }: { customers: Customer[] }) {
+// ── Create Customer Dialog ───────────────────────────────────────────────────
+
+function CreateCustomerDialog({
+  onClose,
+  onSaved,
+}: {
+  onClose: () => void;
+  onSaved: (customer: Customer) => void;
+}) {
+  const { t } = useLang();
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleCreate() {
+    if (!name.trim() || !phone.trim()) {
+      setError(t.common.requiredFields ?? "All fields are required");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), phone }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Failed to create customer");
+        return;
+      }
+      onSaved(data);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: "rgba(0,0,0,0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          borderRadius: 12,
+          padding: "24px",
+          width: "90%",
+          maxWidth: 400,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>
+          {t.customers.newCustomer ?? "New Customer"}
+        </h2>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 6, color: "var(--muted-foreground)" }}>
+            {t.common.name ?? "Name"}
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Sarah Johnson"
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              fontSize: 13.5,
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              background: "var(--background)",
+              color: "var(--foreground)",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = "var(--primary)")}
+            onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+          />
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 6, color: "var(--muted-foreground)" }}>
+            {t.common.phone ?? "Phone"}
+          </label>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
+            placeholder="e.g. 05001234567"
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              fontSize: 13.5,
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              background: "var(--background)",
+              color: "var(--foreground)",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = "var(--primary)")}
+            onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+          />
+          <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}>
+            {t.common.phoneFormat ?? "11 digits starting with 05"}
+          </p>
+        </div>
+
+        {error && (
+          <div
+            style={{
+              padding: "10px 12px",
+              background: "#fde8e8",
+              border: "1px solid #f4b5b5",
+              borderRadius: 6,
+              fontSize: 12,
+              color: "#a01a1a",
+              marginBottom: 16,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: "8px 16px",
+              background: "var(--muted)",
+              border: "1px solid var(--border)",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontSize: 13,
+              color: "var(--foreground)",
+            }}
+          >
+            {t.common.cancel ?? "Cancel"}
+          </button>
+          <button
+            onClick={handleCreate}
+            disabled={saving}
+            style={{
+              padding: "8px 16px",
+              background: saving ? "var(--muted)" : "var(--primary)",
+              color: saving ? "var(--muted-foreground)" : "white",
+              border: "none",
+              borderRadius: 6,
+              cursor: saving ? "default" : "pointer",
+              fontSize: 13,
+              fontWeight: 500,
+            }}
+          >
+            {saving ? (t.common.creating ?? "Creating...") : (t.common.create ?? "Create")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function CustomersClient({ customers: initialCustomers }: { customers: Customer[] }) {
   const { t } = useLang();
   const [query, setQuery] = useState("");
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [customers, setCustomers] = useState(initialCustomers);
 
   const filtered = query.trim()
     ? customers.filter(
@@ -37,6 +216,24 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
             {customers.length} {customers.length === 1 ? t.customers.subtitle1 : t.customers.subtitle2}
           </p>
         </div>
+        <button
+          onClick={() => setShowCreateDialog(true)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "8px 16px",
+            background: "var(--primary)",
+            color: "white",
+            border: "none",
+            borderRadius: 8,
+            cursor: "pointer",
+            fontSize: 13,
+            fontWeight: 500,
+          }}
+        >
+          <Plus size={16} /> {t.customers.newCustomer ?? "New Customer"}
+        </button>
       </div>
 
       {/* Search Bar */}
@@ -190,6 +387,17 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
             );
           })}
         </div>
+      )}
+
+      {/* Create Customer Dialog */}
+      {showCreateDialog && (
+        <CreateCustomerDialog
+          onClose={() => setShowCreateDialog(false)}
+          onSaved={(newCustomer) => {
+            setCustomers([...customers, newCustomer].sort((a, b) => a.name.localeCompare(b.name)));
+            setShowCreateDialog(false);
+          }}
+        />
       )}
     </div>
   );

@@ -226,6 +226,101 @@ function NotesDialog({
   );
 }
 
+// ── EditPrice Dialog ──────────────────────────────────────────────────────────
+
+function EditPriceDialog({
+  appt,
+  onClose,
+  onSaved,
+}: {
+  appt: Appointment;
+  onClose: () => void;
+  onSaved: (updated: Appointment) => void;
+}) {
+  const { t } = useLang();
+  const [price, setPrice] = useState(String(appt.priceAtBooking ?? appt.service.price));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSave() {
+    const newPrice = Number(price);
+    if (isNaN(newPrice) || newPrice < 0) {
+      setError(t.appointments.invalidPrice ?? "Invalid price");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/appointments/${appt.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceAtBooking: newPrice }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onSaved(data);
+        onClose();
+      } else {
+        const data = await res.json();
+        setError(data.error ?? "Failed to update price");
+      }
+    } catch (err) {
+      setError("Failed to update price");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div style={overlayStyle} onClick={onClose}>
+      <div className="admin-modal" style={dialogStyle} onClick={(e) => e.stopPropagation()}>
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
+          {t.appointments.editPrice ?? "Edit Price"}
+        </h3>
+        <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", marginBottom: 20 }}>
+          {appt.customer.name} · {appt.service.name} · {format(new Date(appt.startTime), "MMM d, h:mm a")}
+        </p>
+        
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 6, color: "var(--muted-foreground)" }}>
+            {t.appointments.price}
+          </label>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 16, fontWeight: 600, color: "var(--primary)" }}>₺</span>
+            <input
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="0.00"
+              min="0"
+              step="0.01"
+              style={{ ...inputStyle, flex: 1, fontSize: 14 }}
+              autoFocus
+            />
+          </div>
+        </div>
+
+        {error && (
+          <div style={{ padding: "10px 12px", background: "#fde8e8", border: "1px solid #f4b5b5", borderRadius: 6, fontSize: 12, color: "#a01a1a", marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button onClick={onClose} style={ghostBtnStyle}>{t.common.cancel}</button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{ ...primaryBtnStyle, opacity: saving ? 0.7 : 1 }}
+          >
+            {saving ? t.appointments.saving : t.common.save}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export function AppointmentsClient({
@@ -252,6 +347,7 @@ export function AppointmentsClient({
   // Dialog state
   const [postponeAppt, setPostponeAppt] = useState<Appointment | null>(null);
   const [notesAppt, setNotesAppt] = useState<Appointment | null>(null);
+  const [priceAppt, setPriceAppt] = useState<Appointment | null>(null);
 
   const days = eachDayOfInterval({
     start: startOfMonth(currentMonth),
@@ -322,6 +418,11 @@ export function AppointmentsClient({
     );
   }
 
+  function handlePriceSaved(updated: Appointment) {
+    setAppointments((prev) =>
+      prev.map((a) => (a.id === updated.id ? { ...a, ...updated } : a))
+    );
+  }
   function handleNotesSaved(updated: Appointment) {
     setAppointments((prev) =>
       prev.map((a) => (a.id === updated.id ? { ...a, notes: updated.notes } : a))
@@ -348,6 +449,13 @@ export function AppointmentsClient({
           appt={notesAppt}
           onClose={() => setNotesAppt(null)}
           onSaved={handleNotesSaved}
+        />
+      )}
+      {priceAppt && (
+        <EditPriceDialog
+          appt={priceAppt}
+          onClose={() => setPriceAppt(null)}
+          onSaved={handlePriceSaved}
         />
       )}
 
@@ -523,6 +631,7 @@ export function AppointmentsClient({
                     onStatusChange={updateStatus}
                     onPostpone={() => setPostponeAppt(appt)}
                     onEditNotes={() => setNotesAppt(appt)}
+                    onEditPrice={() => setPriceAppt(appt)}
                     loading={loadingId === appt.id}
                     compact
                   />
@@ -735,6 +844,7 @@ function AppointmentCard({
   onStatusChange,
   onPostpone,
   onEditNotes,
+  onEditPrice,
   loading,
   compact = false,
 }: {
@@ -742,6 +852,7 @@ function AppointmentCard({
   onStatusChange: (id: string, status: string) => void;
   onPostpone: () => void;
   onEditNotes: () => void;
+  onEditPrice: () => void;
   loading: boolean;
   compact?: boolean;
 }) {
@@ -817,6 +928,21 @@ function AppointmentCard({
           >
             <FileText size={11} /> {appt.notes ? t.appointments.editNote : t.appointments.addNote}
           </button>
+          {appt.status === "SCHEDULED" && (
+            <button
+              onClick={onEditPrice}
+              style={{
+                ...smallBtnStyle,
+                color: "var(--primary)",
+                background: "var(--muted)",
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              ₺ {t.appointments.editPrice ?? "Edit Price"}
+            </button>
+          )}
         </div>
         <div style={{ fontSize: 13, fontWeight: 500, color: "var(--primary)" }}>
           ₺{appt.priceAtBooking != null ? appt.priceAtBooking : appt.service.price}
