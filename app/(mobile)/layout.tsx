@@ -5,8 +5,8 @@ import { LanguageProvider } from "@/components/providers/language-provider";
 import { MobileShell } from "@/components/mobile/mobile-shell";
 
 export const metadata: Metadata = {
-  title: "Lamees Nail Salon",
-  description: "Nail salon appointment management",
+  title: "Güzellik Salonu",
+  description: "Güzellik Salonu Yönetim Sistemi",
 };
 
 export default function MobileLayout({
