@@ -5,8 +5,8 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { LanguageProvider } from "@/components/providers/language-provider";
 
 export const metadata: Metadata = {
-  title: "Lamees Nail Salon — Admin",
-  description: "Nail salon appointment management system",
+  title: "Güzellik Salonu",
+  description: "Güzellik Salonu Yönetim Sistemi",
 };
 
 export default async function RootLayout({
