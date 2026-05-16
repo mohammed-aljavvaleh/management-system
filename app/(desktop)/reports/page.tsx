@@ -1,15 +1,17 @@
 import { prisma } from "@/lib/prisma";
+import { requireSession } from "@/lib/session";
 import { ReportsClient } from "@/components/reports/reports-client";
 
 export const dynamic = "force-dynamic";
 export default async function ReportsPage() {
+  const { salonId } = await requireSession();
   // Default: last 7 days
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - 6);
   startDate.setHours(0, 0, 0, 0);
 
   const appointments = await prisma.appointment.findMany({
-    where: { startTime: { gte: startDate } },
+    where: { salonId, startTime: { gte: startDate } },
     include: { service: true, staff: true },
     orderBy: { startTime: "asc" },
   });

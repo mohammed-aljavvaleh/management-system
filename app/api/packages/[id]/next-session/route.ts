@@ -2,14 +2,15 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/require-auth";
+import { requireApiSession } from "@/lib/require-auth";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const unauth = await requireAuth();
-  if (unauth) return unauth;
+  const auth = await requireApiSession();
+  if (auth.response) return auth.response;
+  const { salonId } = auth.session;
   try {
     const { id: packageId } = await params;
     const body = await req.json();
@@ -22,8 +23,8 @@ export async function POST(
       );
     }
 
-    const pkg = await prisma.userPackage.findUnique({
-      where: { id: packageId },
+    const pkg = await prisma.userPackage.findFirst({
+      where: { id: packageId, salonId },
       include: { service: true, customer: true },
     });
 
@@ -38,6 +39,14 @@ export async function POST(
       );
     }
 
+    const staffMember = await prisma.staff.findFirst({
+      where: { id: staffId, salonId },
+      select: { id: true },
+    });
+    if (!staffMember) {
+      return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
+    }
+
     // Resolve service — use linked serviceId if present, otherwise infer from
     // the package's existing appointments (handles packages created before the
     // serviceId field was added to UserPackage).
@@ -45,7 +54,7 @@ export async function POST(
 
     if (!service) {
       const existingAppt = await prisma.appointment.findFirst({
-        where: { userPackageId: packageId },
+        where: { userPackageId: packageId, salonId },
         include: { service: true },
         orderBy: { createdAt: "asc" },
       });
@@ -60,8 +69,8 @@ export async function POST(
       service = existingAppt.service;
 
       // Backfill serviceId on the package so this lookup never runs again
-      await prisma.userPackage.update({
-        where: { id: packageId },
+      await prisma.userPackage.updateMany({
+        where: { id: packageId, salonId },
         data: { serviceId: service.id },
       });
     }
@@ -71,6 +80,7 @@ export async function POST(
 
     // Overlap check
     const longestService = await prisma.service.findFirst({
+      where: { salonId },
       orderBy: { duration: "desc" },
       select: { duration: true },
     });
@@ -78,6 +88,7 @@ export async function POST(
 
     const conflict = await prisma.appointment.findFirst({
       where: {
+        salonId,
         staffId,
         status: { not: "CANCELLED" },
         startTime: {
@@ -103,8 +114,8 @@ export async function POST(
     const paidNow = installmentAmount ? Number(installmentAmount) : 0;
 
     const appointment = await prisma.$transaction(async (tx) => {
-      const freshPkg = await tx.userPackage.findUnique({
-        where: { id: packageId },
+      const freshPkg = await tx.userPackage.findFirst({
+        where: { id: packageId, salonId },
         select: { remainingSessions: true },
       });
       if (!freshPkg || freshPkg.remainingSessions <= 0) {
@@ -117,6 +128,7 @@ export async function POST(
           startTime: apptStart,
           serviceId: service.id,
           staffId,
+          salonId,
           status: "SCHEDULED",
           priceAtBooking: paidNow,
           userPackageId: packageId,
@@ -125,8 +137,8 @@ export async function POST(
       });
 
       if (paidNow > 0) {
-        await tx.userPackage.update({
-          where: { id: packageId },
+        await tx.userPackage.updateMany({
+          where: { id: packageId, salonId },
           data: { paidAmount: { increment: paidNow } },
         });
         await tx.installment.create({

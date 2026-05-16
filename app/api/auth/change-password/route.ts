@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "../../../generated/prisma";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { getSession } from "@/lib/session";
-
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
-const prisma = new PrismaClient({ adapter });
+import { requireApiSession } from "@/lib/require-auth";
 
 export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (!session.adminId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireApiSession();
+  if (auth.response) return auth.response;
+  const { adminId, salonId } = auth.session;
 
   const { currentPassword, newPassword } = await req.json();
 
@@ -23,7 +18,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
   }
 
-  const admin = await prisma.admin.findUnique({ where: { id: session.adminId } });
+  const admin = await prisma.admin.findFirst({ where: { id: adminId, salonId } });
   if (!admin) {
     return NextResponse.json({ error: "Admin not found" }, { status: 404 });
   }

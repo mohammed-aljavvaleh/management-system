@@ -1,12 +1,14 @@
 import { prisma } from "@/lib/prisma";
+import { requireSession } from "@/lib/session";
 import { StaffClient } from "@/components/staff/staff-client";
 
 export const dynamic = "force-dynamic";
 export default async function StaffPage() {
+  const { salonId } = await requireSession();
   const [staff, appointments] = await Promise.all([
-    prisma.staff.findMany({ orderBy: { name: "asc" } }),
+    prisma.staff.findMany({ where: { salonId }, orderBy: { name: "asc" } }),
     prisma.appointment.findMany({
-      where: { status: { not: "CANCELLED" } },
+      where: { salonId, status: { not: "CANCELLED" } },
       select: { staffId: true, service: { select: { price: true } } },
     }),
   ]);

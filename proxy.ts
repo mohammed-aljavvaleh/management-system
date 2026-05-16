@@ -38,12 +38,6 @@ export async function proxy(req: NextRequest) {
     return addSecurityHeaders(res);
   }
 
-  if (hasCookie && isLoginPage) {
-    log(req, "REDIRECT /", Date.now() - start);
-    const res = NextResponse.redirect(new URL("/", req.url));
-    return addSecurityHeaders(res);
-  }
-
   log(req, "PASS", Date.now() - start);
   const res = NextResponse.next();
   return addSecurityHeaders(res);
