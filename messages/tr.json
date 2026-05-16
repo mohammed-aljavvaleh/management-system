@@ -1,6 +1,6 @@
 {
   "login": {
-    "title": "Lamees Nail Salon",
+    "title": "GÜZELLİK SALONU YÖNETİM SİSTEMİ",
     "subtitle": "Devam etmek için lütfen giriş yapın",
     "user": "KULLANICI ADI",
     "pass": "PAROLA",
@@ -23,6 +23,7 @@
     "changeSubtitle": "Şifrenizi değiştirin"
   },
   "nav": {
+    "sidebarSubtitle": "GÜZELLİK SALONU",
     "dashboard": "Panel",
     "appointments": "Randevular",
     "services": "Hizmetler",
@@ -33,9 +34,9 @@
     "signOut": "Çıkış Yap"
   },
   "dashboard": {
-    "greeting_morning": "Günaydın, Admin",
-    "greeting_afternoon": "İyi günler, Admin",
-    "greeting_evening": "İyi akşamlar, Admin",
+    "greeting_morning": "Günaydın,",
+    "greeting_afternoon": "İyi günler,",
+    "greeting_evening": "İyi akşamlar",
     "todayRevenue": "Bugünkü Gelir",
     "appointments": "randevu",
     "upcoming": "Yaklaşan",
@@ -220,6 +221,7 @@
     "addMember": "Üye Ekle",
     "totalTeam": "Toplam Ekip Üyeleri",
     "revenueGenerated": "Elde Edilen Gelir",
+    "topPerformer": "En İyi Performans",
     "newMember": "Yeni Üye",
     "editMember": "Üyeyi Düzenle",
     "name": "Ad Soyad",

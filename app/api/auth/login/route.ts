@@ -42,10 +42,11 @@ export async function POST(req: NextRequest) {
   if (!username || !password) {
     return NextResponse.json({ error: "Missing fields." }, { status: 400 });
   }
+  const normalizedUsername = String(username).trim();
 
   // Fetch admin + salon in one query
   const admin = await prisma.admin.findUnique({
-    where: { username },
+    where: { username: normalizedUsername },
     include: { salon: true },
   });
 

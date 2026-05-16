@@ -1,6 +1,6 @@
 {
   "login": {
-    "title": "Lamees Nail Salon",
+    "title": "BEAUTY SALON MANAGEMENT SYSTEM",
     "subtitle": "Please sign in to continue",
     "user": "USERNAME",
     "pass": "PASSWORD",
@@ -23,6 +23,7 @@
     "changeSubtitle": "Change your password"
   },
   "nav": {
+    "sidebarSubtitle": "BEAUTY SALON",
     "dashboard": "Dashboard",
     "appointments": "Appointments",
     "services": "Services",
@@ -33,9 +34,9 @@
     "signOut": "Sign Out"
   },
   "dashboard": {
-    "greeting_morning": "Good morning, Admin",
-    "greeting_afternoon": "Good afternoon, Admin",
-    "greeting_evening": "Good evening, Admin",
+    "greeting_morning": "Good morning,",
+    "greeting_afternoon": "Good afternoon,",
+    "greeting_evening": "Good evening",
     "todayRevenue": "Today's Revenue",
     "appointments": "appointments",
     "upcoming": "Upcoming",
@@ -219,6 +220,7 @@
     "addMember": "Add Member",
     "totalTeam": "Total Team Members",
     "revenueGenerated": "Revenue Generated",
+    "topPerformer": "Top performer",
     "newMember": "New Member",
     "editMember": "Edit Member",
     "name": "Full Name",

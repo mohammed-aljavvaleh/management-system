@@ -7,8 +7,14 @@ export type SessionData = {
   salonId?: string; // ← added for multi-tenancy
 };
 
+const sessionSecret = process.env.SESSION_SECRET;
+
+if (!sessionSecret || sessionSecret.length < 32) {
+  throw new Error("SESSION_SECRET must be set to at least 32 characters.");
+}
+
 export const sessionOptions: SessionOptions = {
-  password: process.env.SESSION_SECRET!,
+  password: sessionSecret,
   cookieName: "lamees_session",
   cookieOptions: {
     secure: process.env.SESSION_COOKIE_SECURE === "true" || (

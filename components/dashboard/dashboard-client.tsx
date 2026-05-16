@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { CalendarDays, TurkishLira, Clock, IdCardLanyard, Scissors, TrendingUp } from "lucide-react";
 import Link from "next/link";
@@ -32,6 +33,30 @@ export function DashboardClient({
   staffCount,
 }: Props) {
   const { t, lang } = useLang();
+  const [adminName, setAdminName] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!active || !data?.username) return;
+        setAdminName(capitalize(data.username));
+      })
+      .catch(() => {
+        // ignore
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  function capitalize(text: string) {
+    if (!text) return text;
+    return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+  }
 
   const completed = todayAppointments.filter((a) => a.status === "COMPLETED").length;
   const cancelled = todayAppointments.filter((a) => a.status === "CANCELLED").length;
@@ -76,7 +101,7 @@ export function DashboardClient({
           {format(new Date(), "EEEE, d MMMM yyyy", { locale: lang === "tr" ? tr : enUS })}
         </p>
         <h1 style={{ fontFamily: "var(--font-display)", fontSize: 32, fontWeight: 500, color: "var(--foreground)" }}>
-          {getGreeting(t)}
+          {`${getGreeting(t)}${adminName ? ` ${adminName}` : ""}`}
         </h1>
       </div>
 

@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     }
 
     const appointments = await prisma.appointment.findMany({
-      where: { salonId, startTime: { gte: startDate }, status: { not: "COMPLETED" } },
+      where: { salonId, startTime: { gte: startDate }, status: "COMPLETED" },
       include: { service: true, staff: true },
       orderBy: { startTime: "asc" },
     });
