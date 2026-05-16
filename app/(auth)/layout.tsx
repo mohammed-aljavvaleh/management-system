@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { LanguageProvider } from "@/components/providers/language-provider";
 
 export const metadata: Metadata = {
-  title: "Lamees Nail Salon — Admin",
-  description: "Nail salon appointment management system",
+  title: "Güzellik Salonu",
+  description: "Güzellik Salonu Yönetim Sistemi",
 };
 
 export default function AuthLayout({
