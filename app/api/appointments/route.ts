@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/require-auth";
 import { revalidatePath } from "next/cache";
+import { isAppointmentStatus, parsePositiveMoney, parseRequiredDate } from "@/lib/api-validation";
 
 export async function GET(req: NextRequest) {
   const auth = await requireApiSession();
@@ -16,13 +17,19 @@ export async function GET(req: NextRequest) {
     const where: Record<string, unknown> = { salonId };
 
     if (dateParam) {
-      const date = new Date(dateParam);
+      const date = parseRequiredDate(dateParam);
+      if (!date) return NextResponse.json({ error: "Invalid date" }, { status: 400 });
       const nextDay = new Date(date);
       nextDay.setDate(nextDay.getDate() + 1);
       where.startTime = { gte: date, lt: nextDay };
     }
     if (staffId) where.staffId = staffId;
-    if (status) where.status = status;
+    if (status) {
+      if (!isAppointmentStatus(status)) {
+        return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+      }
+      where.status = status;
+    }
 
     const appointments = await prisma.appointment.findMany({
       where,
@@ -57,6 +64,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    const parsedStartTime = parseRequiredDate(startTime);
+    if (!parsedStartTime) {
+      return NextResponse.json({ error: "Invalid start time" }, { status: 400 });
+    }
+
     const sessionCount = Math.max(1, Number(sessions) || 1);
 
     const [customer, service, staffMember, longestService] = await Promise.all([
@@ -75,7 +87,7 @@ export async function POST(req: NextRequest) {
     if (!staffMember) return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
 
     // ── Overlap check ─────────────────────────────────────────────────
-    const apptStart = new Date(startTime);
+    const apptStart = parsedStartTime;
     const apptEnd = new Date(apptStart.getTime() + service.duration * 60 * 1000);
     const maxDuration = longestService?.duration ?? 120;
 
@@ -109,10 +121,10 @@ export async function POST(req: NextRequest) {
     const paidNow = installmentAmount ? Number(installmentAmount) : 0;
 
     // Validate prices
-    if (isNaN(totalPrice) || totalPrice <= 0 || totalPrice > 1000000) {
+    if (parsePositiveMoney(totalPrice) === null) {
       return NextResponse.json({ error: "Invalid total price" }, { status: 400 });
     }
-    if (paidNow < 0 || paidNow > totalPrice) {
+    if (!Number.isFinite(paidNow) || paidNow < 0 || paidNow > totalPrice) {
       return NextResponse.json({ error: "Invalid installment amount" }, { status: 400 });
     }
 

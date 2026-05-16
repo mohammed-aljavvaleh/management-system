@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -24,6 +25,30 @@ type SidebarProps = {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const path = usePathname();
   const { t } = useLang();
+  const [adminName, setAdminName] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!mounted || !data?.username) return;
+        setAdminName(capitalize(data.username));
+      })
+      .catch(() => {
+        // ignore failures
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  function capitalize(text: string) {
+    if (!text) return text;
+    return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+  }
 
   const nav = [
     { href: "/dashboard", label: t.nav.dashboard, icon: LayoutDashboard },
@@ -99,13 +124,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 600,
                 color: "var(--foreground)", lineHeight: 1.1,
               }}>
-                L&S
+                {adminName ?? "Admin"}
               </div>
               <div style={{
                 fontSize: 10, color: "var(--muted-foreground)",
                 letterSpacing: "0.08em", textTransform: "uppercase",
               }}>
-                Nail Salon
+                {t.nav.sidebarSubtitle}
               </div>
             </div>
           </div>

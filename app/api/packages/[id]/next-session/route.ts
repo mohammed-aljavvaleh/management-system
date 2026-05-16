@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/require-auth";
+import { parseMoney, parseRequiredDate } from "@/lib/api-validation";
 
 export async function POST(
   req: NextRequest,
@@ -75,7 +76,10 @@ export async function POST(
       });
     }
 
-    const apptStart = new Date(startTime);
+    const apptStart = parseRequiredDate(startTime);
+    if (!apptStart) {
+      return NextResponse.json({ error: "Invalid startTime" }, { status: 400 });
+    }
     const apptEnd = new Date(apptStart.getTime() + service.duration * 60 * 1000);
 
     // Overlap check
@@ -111,7 +115,10 @@ export async function POST(
       }
     }
 
-    const paidNow = installmentAmount ? Number(installmentAmount) : 0;
+    const paidNow = installmentAmount ? parseMoney(installmentAmount) : 0;
+    if (paidNow === null) {
+      return NextResponse.json({ error: "Invalid installment amount" }, { status: 400 });
+    }
 
     const appointment = await prisma.$transaction(async (tx) => {
       const freshPkg = await tx.userPackage.findFirst({

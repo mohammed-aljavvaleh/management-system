@@ -197,7 +197,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
                   <div>
                     <div style={{ fontWeight: 500, fontSize: 14 }}>{member.name}</div>
                     {topStaff?.id === member.id && member.appointmentCount > 0 && (
-                      <div style={{ fontSize: 10, color: "#c9956b", fontWeight: 500 }}>⭐ Top performer</div>
+                      <div style={{ fontSize: 10, color: "#c9956b", fontWeight: 500 }}>{t.staff.topPerformer}</div>
                     )}
                   </div>
                 </div>
@@ -256,7 +256,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="örn. Lamees Bahaa"
+                    placeholder="örn. Ayşe Yılmaz"
                     required
                     style={inputStyle}
                     autoFocus

@@ -27,9 +27,10 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+  const normalizedUsername = username.trim();
 
   // ── Uniqueness pre-check (friendlier error than a DB constraint violation) ─
-  const existing = await prisma.admin.findUnique({ where: { username } });
+  const existing = await prisma.admin.findUnique({ where: { username: normalizedUsername } });
   if (existing) {
     return NextResponse.json({ error: "Username already taken." }, { status: 409 });
   }
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     const admin = await tx.admin.create({
       data: {
-        username: username.trim(),
+        username: normalizedUsername,
         passwordHash,
         salonId: salon.id,
       },

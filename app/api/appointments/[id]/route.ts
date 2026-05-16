@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { requireApiSession } from "@/lib/require-auth";
+import { isAppointmentStatus, parseMoney, parseRequiredDate } from "@/lib/api-validation";
 
 export async function GET(
   _: NextRequest,
@@ -40,15 +41,16 @@ export async function PATCH(
       const installmentAmount = body.installmentAmount
         ? Number(body.installmentAmount)
         : 0;
+      if (!Number.isFinite(installmentAmount) || installmentAmount < 0 || installmentAmount > 1_000_000) {
+        return NextResponse.json({ error: "Invalid installment amount" }, { status: 400 });
+      }
 
       const appointment = await prisma.$transaction(async (tx) => {
         const current = await tx.appointment.findFirst({
           where: { id, salonId },
           select: { userPackageId: true, status: true },
         });
-        
-        
-        
+
         if (!current) throw new Error("Appointment not found");
         if (current.status === "COMPLETED") throw new Error("Already completed");
 
@@ -100,7 +102,10 @@ export async function PATCH(
         return NextResponse.json({ error: "startTime is required to postpone" }, { status: 400 });
       }
 
-      const newStart = new Date(body.startTime);
+      const newStart = parseRequiredDate(body.startTime);
+      if (!newStart) {
+        return NextResponse.json({ error: "Invalid startTime" }, { status: 400 });
+      }
 
       // Fetch current appointment to get staffId and service duration
       const current = await prisma.appointment.findFirst({
@@ -158,7 +163,11 @@ export async function PATCH(
 
     // ── General updates (status, notes, price) ──────────────────────────────
     const data: Record<string, unknown> = {};
-    if (body.startTime !== undefined) data.startTime = new Date(body.startTime);
+    if (body.startTime !== undefined) {
+      const parsedStart = parseRequiredDate(body.startTime);
+      if (!parsedStart) return NextResponse.json({ error: "Invalid startTime" }, { status: 400 });
+      data.startTime = parsedStart;
+    }
     if (body.serviceId !== undefined) {
       const service = await prisma.service.findFirst({
         where: { id: body.serviceId, salonId },
@@ -175,9 +184,20 @@ export async function PATCH(
       if (!staff) return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
       data.staffId = body.staffId;
     }
-    if (body.status !== undefined) data.status = body.status;
+    if (body.status !== undefined) {
+      if (!isAppointmentStatus(body.status)) {
+        return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+      }
+      data.status = body.status;
+    }
     if (body.notes !== undefined) data.notes = body.notes || null;
-    if (body.priceAtBooking !== undefined) data.priceAtBooking = Number(body.priceAtBooking);
+    if (body.priceAtBooking !== undefined) {
+      const priceAtBooking = parseMoney(body.priceAtBooking);
+      if (priceAtBooking === null) {
+        return NextResponse.json({ error: "Invalid priceAtBooking" }, { status: 400 });
+      }
+      data.priceAtBooking = priceAtBooking;
+    }
 
     const appointments = await prisma.appointment.updateManyAndReturn({
       where: { id, salonId },

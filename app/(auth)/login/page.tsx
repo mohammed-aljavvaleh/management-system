@@ -111,7 +111,7 @@ export default function LoginPage() {
       }}>
         <div style={{ marginBottom: 28, textAlign: "center" }}>
           <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 4 }}>
-            L&S SALON
+            {t.login.title}
           </h1>
           <p style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
             {showChangePw ? t.login.changeSubtitle : t.login.subtitle}

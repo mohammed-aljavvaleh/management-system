@@ -1,11 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Menu, X, Sparkles } from "lucide-react";
 
 export function ShellClient({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [adminName, setAdminName] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!mounted || !data?.username) return;
+        setAdminName(capitalize(data.username));
+      })
+      .catch(() => {
+        // ignore
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  function capitalize(text: string) {
+    if (!text) return text;
+    return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+  }
 
   return (
     <>
@@ -48,7 +72,7 @@ export function ShellClient({ children }: { children: React.ReactNode }) {
                 <Sparkles size={13} color="white" />
               </div>
               <span style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 600 }}>
-                Lamees
+                {adminName ?? "Lamees"}
               </span>
             </div>
 
