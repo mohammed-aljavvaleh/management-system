@@ -66,6 +66,7 @@
     "packages": "Paketler",
     "totalSpent": "Ödenmiş",
     "totalOwed": "Borç",
+    "newCustomer": "Yeni Müşteri",
     "activePackages": "Aktif Paketler",
     "completedPackages": "Tamamlanan Paketler",
     "noActive": "Aktif paket yok",
@@ -128,6 +129,8 @@
     "noteDialogPlaceholder": "Bu randevu hakkında bir not ekleyin…",
     "saveNote": "Notu Kaydet",
     "saving": "Kaydediliyor...",
+    "editPrice": "Fiyatı Düzenle",
+    "invalidPrice": "Geçersiz fiyat",
     "statuses": {
       "scheduled": "Planlandı",
       "completed": "Tamamlandı",
@@ -265,7 +268,13 @@
     "search": "Ara",
     "actions": "Eylemler",
     "AM": "ÖÖ",
-    "PM": "ÖS"
+    "PM": "ÖS",
+    "name": "İsim",
+    "phone": "Telefon",
+    "phoneFormat": "05 ile başlayan 11 hane",
+    "requiredFields": "Tüm alanlar gereklidir",
+    "create": "Oluştur",
+    "creating": "Oluşturuluyor..."
   },
   "weekDays": {
     "sunday": "Paz",

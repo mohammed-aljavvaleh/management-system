@@ -29,17 +29,17 @@ export default async function ReportsPage() {
     if (!byDay[key]) continue;
     if (a.status === "CANCELLED") {
       byDay[key].cancelled++;
-    } else {
+    } else if (a.status === "COMPLETED") {
       byDay[key].count++;
+      byDay[key].completed++;
       byDay[key].revenue += a.priceAtBooking;
-      if (a.status === "COMPLETED") byDay[key].completed++;
     }
   }
 
   // Top services
   const serviceMap: Record<string, { name: string; count: number; revenue: number }> = {};
   for (const a of appointments) {
-    if (a.status === "CANCELLED") continue;
+    if (a.status !== "COMPLETED") continue;
     const sid = a.serviceId;
     if (!serviceMap[sid]) serviceMap[sid] = { name: a.service.name, count: 0, revenue: 0 };
     serviceMap[sid].count++;
@@ -49,17 +49,17 @@ export default async function ReportsPage() {
   // Staff performance
   const staffMap: Record<string, { name: string; count: number; revenue: number }> = {};
   for (const a of appointments) {
-    if (a.status === "CANCELLED") continue;
+    if (a.status !== "COMPLETED") continue;
     const stid = a.staffId;
     if (!staffMap[stid]) staffMap[stid] = { name: a.staff.name, count: 0, revenue: 0 };
     staffMap[stid].count++;
     staffMap[stid].revenue += a.priceAtBooking;
   }
 
-  const nonCancelled = appointments.filter((a) => a.status !== "CANCELLED");
-  const totalRevenue = nonCancelled.reduce((s, a) => s + a.priceAtBooking, 0);
+  const completedAppointments = appointments.filter((a) => a.status === "COMPLETED");
+  const totalRevenue = completedAppointments.reduce((s, a) => s + a.priceAtBooking, 0);
   const cancelled = appointments.filter((a) => a.status === "CANCELLED").length;
-  const completed = appointments.filter((a) => a.status === "COMPLETED").length;
+  const completed = completedAppointments.length;
 
   return (
     <ReportsClient
@@ -67,7 +67,7 @@ export default async function ReportsPage() {
       topServices={Object.values(serviceMap).sort((a, b) => b.count - a.count)}
       staffPerformance={Object.values(staffMap).sort((a, b) => b.count - a.count)}
       totalRevenue={totalRevenue}
-      totalCount={nonCancelled.length}
+      totalCount={completed}
       cancelledCount={cancelled}
       completedCount={completed}
     />

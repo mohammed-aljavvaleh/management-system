@@ -8,8 +8,8 @@ export default async function StaffPage() {
   const [staff, appointments] = await Promise.all([
     prisma.staff.findMany({ where: { salonId }, orderBy: { name: "asc" } }),
     prisma.appointment.findMany({
-      where: { salonId, status: { not: "CANCELLED" } },
-      select: { staffId: true, service: { select: { price: true } } },
+      where: { salonId, status: "COMPLETED" },
+      select: { staffId: true, priceAtBooking: true },
     }),
   ]);
 
@@ -18,7 +18,7 @@ export default async function StaffPage() {
   for (const a of appointments) {
     if (!statsMap[a.staffId]) statsMap[a.staffId] = { count: 0, revenue: 0 };
     statsMap[a.staffId].count++;
-    statsMap[a.staffId].revenue += a.service.price;
+    statsMap[a.staffId].revenue += a.priceAtBooking;
   }
 
   const staffWithStats = staff.map((s) => ({

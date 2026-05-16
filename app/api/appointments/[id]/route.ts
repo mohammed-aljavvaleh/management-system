@@ -156,7 +156,7 @@ export async function PATCH(
       return NextResponse.json(appointment);
     }
 
-    // ── General updates (status, notes) ──────────────────────────────
+    // ── General updates (status, notes, price) ──────────────────────────────
     const data: Record<string, unknown> = {};
     if (body.startTime !== undefined) data.startTime = new Date(body.startTime);
     if (body.serviceId !== undefined) {
@@ -177,6 +177,7 @@ export async function PATCH(
     }
     if (body.status !== undefined) data.status = body.status;
     if (body.notes !== undefined) data.notes = body.notes || null;
+    if (body.priceAtBooking !== undefined) data.priceAtBooking = Number(body.priceAtBooking);
 
     const appointments = await prisma.appointment.updateManyAndReturn({
       where: { id, salonId },

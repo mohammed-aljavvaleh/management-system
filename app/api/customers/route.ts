@@ -59,6 +59,12 @@ export async function POST(req: NextRequest) {
     // Return existing customer if phone already registered
     const existing = await prisma.customer.findUnique({
       where: { salonId_phone: { salonId, phone: digits } },
+      include: {
+        _count: { select: { appointments: true, packages: true } },
+        packages: {
+          select: { remainingSessions: true, totalSessions: true },
+        },
+      },
     });
     if (existing) {
       return NextResponse.json(existing, { status: 200 });
@@ -66,6 +72,12 @@ export async function POST(req: NextRequest) {
 
     const customer = await prisma.customer.create({
       data: { name: name.trim(), phone: digits, salonId },
+      include: {
+        _count: { select: { appointments: true, packages: true } },
+        packages: {
+          select: { remainingSessions: true, totalSessions: true },
+        },
+      },
     });
 
     return NextResponse.json(customer, { status: 201 });
