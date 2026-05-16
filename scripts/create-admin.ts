@@ -19,8 +19,8 @@ if (!DATABASE_URL) {
 if (!SALON_NAME?.trim() || !USERNAME?.trim() || !PASSWORD) {
   throw new Error("ADMIN_SALON_NAME, ADMIN_USERNAME, and ADMIN_PASSWORD are required.");
 }
-if (PASSWORD.length < 12) {
-  throw new Error("ADMIN_PASSWORD must be at least 12 characters.");
+if (PASSWORD.length < 8) {
+  throw new Error("ADMIN_PASSWORD must be at least 8 characters.");
 }
 const salonName = SALON_NAME.trim();
 const username = USERNAME.trim();
