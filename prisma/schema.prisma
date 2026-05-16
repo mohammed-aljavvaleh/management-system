@@ -1,7 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// prisma/schema.prisma
+// Multi-tenant schema: every data model is scoped to a Salon.
+// Prisma 7 — datasource URL is managed via prisma.config.ts (do NOT add `url` here).
 
 generator client {
   provider   = "prisma-client-js"
@@ -13,29 +12,72 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─── Tenancy Root ────────────────────────────────────────────────────────────
+
+model Salon {
+  id           String        @id @default(cuid())
+  createdAt    DateTime      @default(now())
+  name         String
+
+  admins       Admin[]
+  customers    Customer[]
+  services     Service[]
+  staff        Staff[]
+  appointments Appointment[]
+  userPackages UserPackage[]
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+
+model Admin {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+
+  salonId      String
+  salon        Salon    @relation(fields: [salonId], references: [id])
+}
+
+// ─── Business Models (all scoped to a Salon) ─────────────────────────────────
+
 model Customer {
   id           String        @id @default(cuid())
   createdAt    DateTime      @default(now())
   name         String
-  phone        String        @unique
+  phone        String
   notes        String?
+
+  salonId      String
+  salon        Salon         @relation(fields: [salonId], references: [id])
+
   appointments Appointment[]
   packages     UserPackage[]
+
+  // Phone must be unique *within* a salon, not globally.
+  @@unique([salonId, phone])
 }
 
 model Service {
   id           String        @id @default(cuid())
-  name         String        // e.g., "Manicure"
+  name         String
   price        Float
-  duration     Int           // duration in minutes
+  duration     Int           // minutes
+
+  salonId      String
+  salon        Salon         @relation(fields: [salonId], references: [id])
+
   appointments Appointment[]
-  packages    UserPackage[]
+  packages     UserPackage[]
 }
 
 model Staff {
   id           String        @id @default(cuid())
   name         String
   role         String        @default("Technician")
+
+  salonId      String
+  salon        Salon         @relation(fields: [salonId], references: [id])
+
   appointments Appointment[]
 }
 
@@ -49,6 +91,9 @@ model UserPackage {
 
   totalPrice        Float
   paidAmount        Float         @default(0)
+
+  salonId           String
+  salon             Salon         @relation(fields: [salonId], references: [id])
 
   customerId        String
   customer          Customer      @relation(fields: [customerId], references: [id])
@@ -71,30 +116,26 @@ model Installment {
 }
 
 model Appointment {
-  id             String   @id @default(cuid())
-  createdAt      DateTime @default(now())
+  id             String      @id @default(cuid())
+  createdAt      DateTime    @default(now())
   startTime      DateTime
-   
+
+  salonId        String
+  salon          Salon       @relation(fields: [salonId], references: [id])
+
   customerId     String
-  customer       Customer @relation(fields: [customerId], references: [id]) 
-     
+  customer       Customer    @relation(fields: [customerId], references: [id])
+
   serviceId      String
-  service        Service  @relation(fields: [serviceId], references: [id])
+  service        Service     @relation(fields: [serviceId], references: [id])
   priceAtBooking Float
-  
+
   staffId        String
-  staff          Staff    @relation(fields: [staffId], references: [id])
-  
+  staff          Staff       @relation(fields: [staffId], references: [id])
+
   userPackageId  String?
   userPackage    UserPackage? @relation(fields: [userPackageId], references: [id])
 
-  notes         String?
-
-  status         String   @default("SCHEDULED") // SCHEDULED, CANCELLED, COMPLETED
-}
-
-model Admin {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String
+  notes          String?
+  status         String      @default("SCHEDULED") // SCHEDULED | CANCELLED | COMPLETED
 }

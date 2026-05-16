@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/require-auth";
+import { requireApiSession } from "@/lib/require-auth";
 
 export async function GET(
   _: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const unauth = await requireAuth();
-  if (unauth) return unauth;
+  const auth = await requireApiSession();
+  if (auth.response) return auth.response;
+  const { salonId } = auth.session;
   try {
     const { id } = await params;
 
-    const customer = await prisma.customer.findUnique({
-      where: { id },
+    const customer = await prisma.customer.findFirst({
+      where: { id, salonId },
       include: {
         appointments: {
           include: { service: true, staff: true, userPackage: true },
@@ -44,8 +45,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const unauth = await requireAuth();
-  if (unauth) return unauth;
+  const auth = await requireApiSession();
+  if (auth.response) return auth.response;
+  const { salonId } = auth.session;
   try {
     const { id } = await params;
     const body = await req.json();
@@ -70,8 +72,14 @@ export async function PATCH(
       data.notes = body.notes === "" ? null : String(body.notes).trim();
     }
 
-    const customer = await prisma.customer.update({ where: { id }, data });
-    return NextResponse.json(customer);
+    const customer = await prisma.customer.updateManyAndReturn({
+      where: { id, salonId },
+      data,
+    });
+    if (!customer[0]) {
+      return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+    }
+    return NextResponse.json(customer[0]);
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Failed to update customer" }, { status: 500 });

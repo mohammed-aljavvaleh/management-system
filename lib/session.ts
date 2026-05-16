@@ -1,10 +1,10 @@
 import { getIronSession, SessionOptions } from "iron-session";
 import { cookies } from "next/headers";
-import path from "path";
 
 export type SessionData = {
   adminId?: string;
   username?: string;
+  salonId?: string; // ← added for multi-tenancy
 };
 
 export const sessionOptions: SessionOptions = {
@@ -16,11 +16,23 @@ export const sessionOptions: SessionOptions = {
     ),
     httpOnly: true,
     sameSite: "lax",
-    maxAge: 60 * 60 * 24, // 24 hours (reduced from 7 days for better security)
+    maxAge: 60 * 60 * 24,
     path: "/",
   },
 };
 
 export async function getSession() {
   return getIronSession<SessionData>(await cookies(), sessionOptions);
+}
+
+/**
+ * Use this in any Server Component or Server Action that requires authentication.
+ * Throws "UNAUTHORIZED" if the session is missing adminId or salonId.
+ */
+export async function requireSession() {
+  const session = await getSession();
+  if (!session.adminId || !session.salonId) {
+    throw new Error("UNAUTHORIZED");
+  }
+  return session as Required<SessionData>;
 }

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/require-auth";
+import { requireApiSession } from "@/lib/require-auth";
 
 export async function GET(req: NextRequest) {
-  const unauth = await requireAuth();
-  if (unauth) return unauth;
+  const auth = await requireApiSession();
+  if (auth.response) return auth.response;
+  const { salonId } = auth.session;
   try {
     const { searchParams } = new URL(req.url);
     const range = searchParams.get("range") || "week"; // 'day' | 'week' | 'month'
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
     }
 
     const appointments = await prisma.appointment.findMany({
-      where: { startTime: { gte: startDate }, status: { not: "COMPLETED" } },
+      where: { salonId, startTime: { gte: startDate }, status: { not: "COMPLETED" } },
       include: { service: true, staff: true },
       orderBy: { startTime: "asc" },
     });
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
 
     // Cancelled count
     const cancelledCount = await prisma.appointment.count({
-      where: { startTime: { gte: startDate }, status: "CANCELLED" },
+      where: { salonId, startTime: { gte: startDate }, status: "CANCELLED" },
     });
 
     return NextResponse.json({

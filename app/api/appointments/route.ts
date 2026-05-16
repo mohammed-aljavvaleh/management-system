@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/require-auth";
+import { requireApiSession } from "@/lib/require-auth";
 import { revalidatePath } from "next/cache";
 
 export async function GET(req: NextRequest) {
-  const unauth = await requireAuth();
-  if (unauth) return unauth;
+  const auth = await requireApiSession();
+  if (auth.response) return auth.response;
+  const { salonId } = auth.session;
   try {
     const { searchParams } = new URL(req.url);
     const dateParam = searchParams.get("date");
     const staffId = searchParams.get("staffId");
     const status = searchParams.get("status");
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { salonId };
 
     if (dateParam) {
       const date = new Date(dateParam);
@@ -37,8 +38,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const unauth = await requireAuth();
-  if (unauth) return unauth;
+  const auth = await requireApiSession();
+  if (auth.response) return auth.response;
+  const { salonId } = auth.session;
   try {
     const body = await req.json();
     const {
@@ -57,14 +59,20 @@ export async function POST(req: NextRequest) {
 
     const sessionCount = Math.max(1, Number(sessions) || 1);
 
-    const [customer, service, longestService] = await Promise.all([
-      prisma.customer.findUnique({ where: { id: customerId } }),
-      prisma.service.findUnique({ where: { id: serviceId } }),
-      prisma.service.findFirst({ orderBy: { duration: "desc" }, select: { duration: true } }),
+    const [customer, service, staffMember, longestService] = await Promise.all([
+      prisma.customer.findFirst({ where: { id: customerId, salonId } }),
+      prisma.service.findFirst({ where: { id: serviceId, salonId } }),
+      prisma.staff.findFirst({ where: { id: staffId, salonId } }),
+      prisma.service.findFirst({
+        where: { salonId },
+        orderBy: { duration: "desc" },
+        select: { duration: true },
+      }),
     ]);
 
     if (!customer) return NextResponse.json({ error: "Customer not found" }, { status: 404 });
     if (!service) return NextResponse.json({ error: "Service not found" }, { status: 404 });
+    if (!staffMember) return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
 
     // ── Overlap check ─────────────────────────────────────────────────
     const apptStart = new Date(startTime);
@@ -73,6 +81,7 @@ export async function POST(req: NextRequest) {
 
     const conflict = await prisma.appointment.findFirst({
       where: {
+        salonId,
         staffId,
         status: { not: "CANCELLED" },
         startTime: {
@@ -115,6 +124,7 @@ export async function POST(req: NextRequest) {
           startTime: apptStart,
           serviceId,
           staffId,
+          salonId,
           status: "SCHEDULED",
           priceAtBooking: totalPrice,
         },
@@ -133,6 +143,7 @@ export async function POST(req: NextRequest) {
           name: `${service.name} — ${sessionCount} Sessions`,
           customerId,
           serviceId,           // ← now saved so next-session route can find it
+          salonId,
           totalSessions: sessionCount,
           remainingSessions: sessionCount,
           totalPrice,
@@ -156,6 +167,7 @@ export async function POST(req: NextRequest) {
           startTime: apptStart,
           serviceId,
           staffId,
+          salonId,
           status: "SCHEDULED",
           priceAtBooking: paidNow,
           userPackageId: pkg.id,

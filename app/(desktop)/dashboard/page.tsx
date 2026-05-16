@@ -1,8 +1,20 @@
 import { prisma } from "@/lib/prisma";
+import { requireSession } from "@/lib/session";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    redirect("/login");
+  }
+
+  const { salonId } = session;
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
@@ -11,15 +23,15 @@ export default async function DashboardPage() {
   const [todayAppointments, upcomingCount, services, staff] =
     await Promise.all([
       prisma.appointment.findMany({
-        where: { startTime: { gte: today, lt: tomorrow } },
+        where: { salonId, startTime: { gte: today, lt: tomorrow } },
         include: { service: true, staff: true, customer: true },
         orderBy: { startTime: "asc" },
       }),
       prisma.appointment.count({
-        where: { startTime: { gte: today }, status: "SCHEDULED" },
+        where: { salonId, startTime: { gte: today }, status: "SCHEDULED" },
       }),
-      prisma.service.count(),
-      prisma.staff.count(),
+      prisma.service.count({ where: { salonId } }),
+      prisma.staff.count({ where: { salonId } }),
     ]);
 
   const todayRevenue = todayAppointments

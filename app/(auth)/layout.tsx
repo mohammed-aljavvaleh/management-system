@@ -1,7 +1,5 @@
 import "../globals.css";
 import type { Metadata } from "next";
-import { ShellClient } from "@/components/layout/shell-client";
-import { QueryProvider } from "@/components/providers/query-provider";
 import { LanguageProvider } from "@/components/providers/language-provider";
 
 export const metadata: Metadata = {
@@ -9,7 +7,7 @@ export const metadata: Metadata = {
   description: "Nail salon appointment management system",
 };
 
-export default async function RootLayout({
+export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -17,11 +15,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body className="h-full">
-        <LanguageProvider>
-          <QueryProvider>
-            <ShellClient>{children}</ShellClient>
-          </QueryProvider>
-        </LanguageProvider>
+        <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>
   );
