@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
           serviceId,           // ← now saved so next-session route can find it
           salonId,
           totalSessions: sessionCount,
-          remainingSessions: sessionCount,
+          remainingSessions: sessionCount - 1,
           totalPrice,
           paidAmount: paidNow,
         },

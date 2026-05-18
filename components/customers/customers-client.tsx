@@ -25,14 +25,48 @@ function CreateCustomerDialog({
   const { t } = useLang();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  function handlePhoneChange(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    setPhone(digits);
+    if (digits.length === 0) {
+      setPhoneError(t.appointmentForm.errors.phoneRequired);
+    } else if (!digits.startsWith("05")) {
+      setPhoneError(t.appointmentForm.errors.phoneMustStart);
+    } else if (digits.length < 11) {
+      setPhoneError(`${digits.length}/11 — ${t.appointmentForm.errors.short}`);
+    } else {
+      setPhoneError("");
+    }
+  }
+
+  function validatePhone(): boolean {
+    if (phone.length === 0) {
+      setPhoneError(t.appointmentForm.errors.phoneRequired);
+      return false;
+    }
+    if (!phone.startsWith("05")) {
+      setPhoneError(t.appointmentForm.errors.phoneMustStart);
+      return false;
+    }
+    if (phone.length !== 11) {
+      setPhoneError(t.appointmentForm.errors.PhoneTooShort);
+      return false;
+    }
+    return true;
+  }
+
   async function handleCreate() {
-    if (!name.trim() || !phone.trim()) {
+    setError("");
+    if (!name.trim()) {
       setError(t.common.requiredFields ?? "All fields are required");
       return;
     }
+    if (!validatePhone()) return;
+
     setSaving(true);
     setError("");
     try {
@@ -115,14 +149,22 @@ function CreateCustomerDialog({
           </label>
           <input
             type="tel"
+            inputMode="numeric"
             value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
-            placeholder="e.g. 05001234567"
+            onChange={(e) => handlePhoneChange(e.target.value)}
+            placeholder="05XXXXXXXXX"
+            maxLength={11}
             style={{
               width: "100%",
               padding: "8px 12px",
               fontSize: 13.5,
-              border: "1px solid var(--border)",
+              border: `1px solid ${
+                phoneError
+                  ? "#c45c5c"
+                  : phone.length === 11 && !phoneError
+                    ? "#2d7a2d"
+                    : "var(--border)"
+              }`,
               borderRadius: 8,
               background: "var(--background)",
               color: "var(--foreground)",
@@ -130,11 +172,22 @@ function CreateCustomerDialog({
               boxSizing: "border-box",
             }}
             onFocus={(e) => (e.currentTarget.style.borderColor = "var(--primary)")}
-            onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = phoneError
+                ? "#c45c5c"
+                : phone.length === 11 && !phoneError
+                  ? "#2d7a2d"
+                  : "var(--border)";
+            }}
           />
-          <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}>
-            {t.common.phoneFormat ?? "11 digits starting with 05"}
-          </p>
+          <div style={{ marginTop: 5, minHeight: 18, display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 12, color: phoneError ? "#c45c5c" : phone.length === 11 ? "#2d7a2d" : "var(--muted-foreground)" }}>
+              {phoneError ? phoneError : phone.length === 11 ? t.appointmentForm.validNumber : t.appointmentForm.phoneNumberRules}
+            </span>
+            <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>
+              {phone.length}/11
+            </span>
+          </div>
         </div>
 
         {error && (
