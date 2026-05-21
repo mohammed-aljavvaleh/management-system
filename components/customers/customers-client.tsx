@@ -36,50 +36,38 @@ function CreateCustomerDialog({
     setPhone(digits);
     if (digits.length === 0) {
       setPhoneError(t.appointmentForm.errors.phoneRequired);
-      return;
-    }
-    if (!digits.startsWith("05")) {
+    } else if (!digits.startsWith("05")) {
       setPhoneError(t.appointmentForm.errors.phoneMustStart);
-      return;
-    }
-
-    const hasMatchingPrefix = customers.some((c) => c.phone.startsWith(digits));
-    if (digits.length < 11) {
-      setPhoneError(""); // Clear any blocking errors while typing
+    } else if (digits.length < 11) {
+      setPhoneError(`${digits.length}/11 — ${t.appointmentForm.errors.short}`);
     } else {
-      // Exactly 11 digits
-      const isExactMatch = customers.some((c) => c.phone === digits);
-      if (isExactMatch) {
-        setPhoneError(t.common.phoneExists ?? "Phone number is already registered");
-      } else {
-        setPhoneError("");
-      }
+      setPhoneError("");
     }
   }
 
-  async function handleCreate() {
-    if (!name.trim()) {
-      setError(t.appointmentForm.errors.nameRequired ?? "Customer name is required");
-      return;
-    }
+  function validatePhone(): boolean {
     if (phone.length === 0) {
       setPhoneError(t.appointmentForm.errors.phoneRequired);
-      return;
+      return false;
     }
     if (!phone.startsWith("05")) {
       setPhoneError(t.appointmentForm.errors.phoneMustStart);
-      return;
+      return false;
     }
     if (phone.length !== 11) {
       setPhoneError(t.appointmentForm.errors.PhoneTooShort);
+      return false;
+    }
+    return true;
+  }
+
+  async function handleCreate() {
+    setError("");
+    if (!name.trim()) {
+      setError(t.common.requiredFields ?? "All fields are required");
       return;
     }
-    const isExactMatch = customers.some((c) => c.phone === phone);
-    if (isExactMatch) {
-      setPhoneError(t.common.phoneExists ?? "Phone number is already registered");
-      return;
-    }
-    if (phoneError) return;
+    if (!validatePhone()) return;
 
     setSaving(true);
     setError("");
@@ -178,7 +166,13 @@ function CreateCustomerDialog({
               width: "100%",
               padding: "8px 12px",
               fontSize: 13.5,
-              border: "1px solid var(--border)",
+              border: `1px solid ${
+                phoneError
+                  ? "#c45c5c"
+                  : phone.length === 11 && !phoneError
+                    ? "#2d7a2d"
+                    : "var(--border)"
+              }`,
               borderRadius: 8,
               background: "var(--background)",
               color: "var(--foreground)",
@@ -195,35 +189,18 @@ function CreateCustomerDialog({
                 return !hasMatchingPrefix ? "#2d7a2d" : "var(--border)";
               })(),
             }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = "var(--primary)")}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = phoneError
+                ? "#c45c5c"
+                : phone.length === 11 && !phoneError
+                  ? "#2d7a2d"
+                  : "var(--border)";
+            }}
           />
           <div style={{ marginTop: 5, minHeight: 18, display: "flex", justifyContent: "space-between" }}>
-            <span style={{
-              fontSize: 12,
-              color: (() => {
-                if (phone.length === 0) return "var(--muted-foreground)";
-                if (!phone.startsWith("05")) return "#c45c5c";
-
-                const hasMatchingPrefix = customers.some((c) => c.phone.startsWith(phone));
-                if (phone.length === 11) {
-                  return hasMatchingPrefix ? "#c45c5c" : "#2d7a2d";
-                }
-                return !hasMatchingPrefix ? "#2d7a2d" : "var(--muted-foreground)";
-              })()
-            }}>
-              {(() => {
-                if (phone.length === 0) return t.appointmentForm.phoneNumberRules;
-                if (!phone.startsWith("05")) return t.appointmentForm.errors.phoneMustStart;
-
-                const hasMatchingPrefix = customers.some((c) => c.phone.startsWith(phone));
-                if (phone.length === 11) {
-                  return hasMatchingPrefix
-                    ? (t.common.phoneExists ?? "Phone number is already registered")
-                    : t.appointmentForm.validNumber;
-                }
-                return !hasMatchingPrefix
-                  ? (t.appointmentForm.availableNumber ?? "✓ Phone number is available")
-                  : t.appointmentForm.phoneNumberRules;
-              })()}
+            <span style={{ fontSize: 12, color: phoneError ? "#c45c5c" : phone.length === 11 ? "#2d7a2d" : "var(--muted-foreground)" }}>
+              {phoneError ? phoneError : phone.length === 11 ? t.appointmentForm.validNumber : t.appointmentForm.phoneNumberRules}
             </span>
             <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>
               {phone.length}/11
