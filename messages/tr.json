@@ -154,6 +154,7 @@
     "fullNamePlaceholder": "örn. Ayşe Kaya",
     "phoneNumber": "Telefon Numarası*",
     "validNumber": "✓ Geçerli telefon numarası",
+    "availableNumber": "✓ Telefon numarası kullanılabilir",
     "phonePlaceholder": "+90 555 000 0000 (isteğe bağlı)",
     "phoneNumberRules": "05 ile başlamalı · tam 11 rakamdan oluşmalı",
     "serviceStaff": "Hizmet ve Personel",

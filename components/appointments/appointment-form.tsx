@@ -44,6 +44,24 @@ export function AppointmentForm({ services, staff }: Props) {
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [existingPhones, setExistingPhones] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function loadPhones() {
+      try {
+        const res = await fetch("/api/customers");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setExistingPhones(data.map((c: any) => c.phone));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load customer phone numbers:", err);
+      }
+    }
+    loadPhones();
+  }, []);
 
   // ── Service / booking state ─────────────────────────────────────
   const [serviceId, setServiceId] = useState(services[0]?.id || "");
@@ -98,12 +116,24 @@ export function AppointmentForm({ services, staff }: Props) {
     setNewPhone(digits);
     if (digits.length === 0) {
       setPhoneError(t.appointmentForm.errors.phoneRequired);
-    } else if (!digits.startsWith("05")) {
+      return;
+    }
+    if (!digits.startsWith("05")) {
       setPhoneError(t.appointmentForm.errors.phoneMustStart);
-    } else if (digits.length < 11) {
-      setPhoneError(`${digits.length}/11 — ${t.appointmentForm.errors.short}`);
+      return;
+    }
+
+    const hasMatchingPrefix = existingPhones.some((phone) => phone.startsWith(digits));
+    if (digits.length < 11) {
+      setPhoneError(""); // Clear any blocking errors while typing
     } else {
-      setPhoneError("");
+      // Exactly 11 digits
+      const isExactMatch = existingPhones.some((phone) => phone === digits);
+      if (isExactMatch) {
+        setPhoneError(t.common.phoneExists ?? "Phone number is already registered");
+      } else {
+        setPhoneError("");
+      }
     }
   }
 
@@ -111,6 +141,11 @@ export function AppointmentForm({ services, staff }: Props) {
     if (newPhone.length === 0) { setPhoneError(t.appointmentForm.errors.phoneRequired); return false; }
     if (!newPhone.startsWith("05")) { setPhoneError(t.appointmentForm.errors.phoneMustStart); return false; }
     if (newPhone.length !== 11) { setPhoneError(t.appointmentForm.errors.PhoneTooShort); return false; }
+    const isExactMatch = existingPhones.some((phone) => phone === newPhone);
+    if (isExactMatch) {
+      setPhoneError(t.common.phoneExists ?? "Phone number is already registered");
+      return false;
+    }
     return true;
   }
 
@@ -337,16 +372,46 @@ export function AppointmentForm({ services, staff }: Props) {
                     maxLength={11}
                     style={{
                       ...inputStyle,
-                      borderColor: phoneError
-                        ? "#c45c5c"
-                        : newPhone.length === 11 && !phoneError
-                        ? "#2d7a2d"
-                        : "var(--border)",
+                      borderColor: (() => {
+                        if (newPhone.length === 0) return "var(--border)";
+                        if (!newPhone.startsWith("05")) return "#c45c5c";
+
+                        const hasMatchingPrefix = existingPhones.some((p) => p.startsWith(newPhone));
+                        if (newPhone.length === 11) {
+                          return hasMatchingPrefix ? "#c45c5c" : "#2d7a2d";
+                        }
+                        return !hasMatchingPrefix ? "#2d7a2d" : "var(--border)";
+                      })(),
                     }}
                   />
                   <div style={{ marginTop: 5, minHeight: 18, display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 12, color: phoneError ? "#c45c5c" : newPhone.length === 11 ? "#2d7a2d" : "var(--muted-foreground)" }}>
-                      {phoneError ? phoneError : newPhone.length === 11 ? t.appointmentForm.validNumber : t.appointmentForm.phoneNumberRules}
+                    <span style={{
+                      fontSize: 12,
+                      color: (() => {
+                        if (newPhone.length === 0) return "var(--muted-foreground)";
+                        if (!newPhone.startsWith("05")) return "#c45c5c";
+
+                        const hasMatchingPrefix = existingPhones.some((p) => p.startsWith(newPhone));
+                        if (newPhone.length === 11) {
+                          return hasMatchingPrefix ? "#c45c5c" : "#2d7a2d";
+                        }
+                        return !hasMatchingPrefix ? "#2d7a2d" : "var(--muted-foreground)";
+                      })(),
+                    }}>
+                      {(() => {
+                        if (newPhone.length === 0) return t.appointmentForm.phoneNumberRules;
+                        if (!newPhone.startsWith("05")) return t.appointmentForm.errors.phoneMustStart;
+
+                        const hasMatchingPrefix = existingPhones.some((p) => p.startsWith(newPhone));
+                        if (newPhone.length === 11) {
+                          return hasMatchingPrefix
+                            ? (t.common.phoneExists ?? "Phone number is already registered")
+                            : t.appointmentForm.validNumber;
+                        }
+                        return !hasMatchingPrefix
+                          ? (t.appointmentForm.availableNumber ?? "✓ Phone number is available")
+                          : t.appointmentForm.phoneNumberRules;
+                      })()}
                     </span>
                     <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>
                       {newPhone.length}/11
