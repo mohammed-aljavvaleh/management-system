@@ -43,7 +43,11 @@ function CreateCustomerDialog({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Failed to create customer");
+        if (data.error === "Phone number is already registered") {
+          setError(t.common.phoneExists ?? "Phone number is already registered");
+        } else {
+          setError(data.error ?? "Failed to create customer");
+        }
         return;
       }
       onSaved(data);
@@ -92,7 +96,7 @@ function CreateCustomerDialog({
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Sarah Johnson"
+            placeholder={t.appointmentForm.fullNamePlaceholder}
             style={{
               width: "100%",
               padding: "8px 12px",
@@ -117,7 +121,7 @@ function CreateCustomerDialog({
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
-            placeholder="e.g. 05001234567"
+            placeholder={t.common.phonePlaceholder}
             style={{
               width: "100%",
               padding: "8px 12px",
@@ -295,7 +299,9 @@ export function CustomersClient({ customers: initialCustomers }: { customers: Cu
       {/* Results count when searching */}
       {query.trim() && (
         <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12 }}>
-          {filtered.length} result{filtered.length !== 1 ? "s" : ""} for &ldquo;{query.trim()}&rdquo;
+          {filtered.length === 1
+            ? t.customers.searchResultOne.replace("{query}", query.trim())
+            : t.customers.searchResults.replace("{count}", String(filtered.length)).replace("{query}", query.trim())}
         </p>
       )}
 

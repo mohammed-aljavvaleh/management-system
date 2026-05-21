@@ -31,7 +31,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     window.requestAnimationFrame(() => {
       const saved = localStorage.getItem("lang") as Language;
-      if (saved === "en" || saved === "tr") setLangState(saved);
+      if (saved === "en" || saved === "tr") {
+        setLangState(saved);
+        document.cookie = `lang=${saved}; path=/; max-age=31536000; SameSite=Lax`;
+      } else {
+        document.cookie = `lang=en; path=/; max-age=31536000; SameSite=Lax`;
+      }
       setMounted(true);
     });
   }, []);
@@ -39,6 +44,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   function setLang(l: Language) {
     setLangState(l);
     localStorage.setItem("lang", l);
+    document.cookie = `lang=${l}; path=/; max-age=31536000; SameSite=Lax`;
   }
 
   return (

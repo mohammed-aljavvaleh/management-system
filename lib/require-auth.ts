@@ -1,10 +1,12 @@
 import { getSession, SessionData } from "@/lib/session";
 import { NextResponse } from "next/server";
+import { getTranslations } from "@/lib/get-translations";
 
 export async function requireAuth() {
   const session = await getSession();
   if (!session.adminId || !session.salonId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const t = await getTranslations();
+    return NextResponse.json({ error: t.apiErrors.unauthorized }, { status: 401 });
   }
   return null;
 }
@@ -17,8 +19,9 @@ export async function requireApiSession(): Promise<
 > {
   const session = await getSession();
   if (!session.adminId || !session.salonId) {
+    const t = await getTranslations();
     return {
-      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+      response: NextResponse.json({ error: t.apiErrors.unauthorized }, { status: 401 }),
     };
   }
 

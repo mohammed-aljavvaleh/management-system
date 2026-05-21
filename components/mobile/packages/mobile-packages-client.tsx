@@ -3,6 +3,8 @@
 import { useState, useMemo } from "react";
 import { Search, User, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLang } from "@/components/providers/language-provider";
+import { localizePackageName } from "@/lib/package-utils";
 
 type UserPackage = {
   id: string;
@@ -17,6 +19,7 @@ type UserPackage = {
 };
 
 export function MobilePackagesClient({ packages }: { packages: UserPackage[] }) {
+  const { t } = useLang();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"ALL" | "ACTIVE" | "COMPLETED">("ALL");
 
@@ -44,7 +47,7 @@ export function MobilePackagesClient({ packages }: { packages: UserPackage[] }) 
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search packages…"
+            placeholder={t.packages.searchPlaceholder}
             className="w-full pl-9 pr-4 py-2 text-sm bg-zinc-50 border border-zinc-200 rounded-lg outline-none focus:ring-2 focus:ring-rose-300"
           />
         </div>
@@ -60,7 +63,7 @@ export function MobilePackagesClient({ packages }: { packages: UserPackage[] }) 
                   : "bg-zinc-100 text-zinc-500"
               )}
             >
-              {f === "ALL" ? "All" : f === "ACTIVE" ? "Active" : "Completed"}
+              {f === "ALL" ? t.packages.all : f === "ACTIVE" ? t.packages.active : t.packages.completed}
             </button>
           ))}
         </div>
@@ -70,7 +73,7 @@ export function MobilePackagesClient({ packages }: { packages: UserPackage[] }) 
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
         {filtered.length === 0 && (
           <div className="text-center text-zinc-400 text-sm py-12">
-            No packages found
+            {t.packages.noPackages}
           </div>
         )}
         {filtered.map((p) => {
@@ -86,7 +89,7 @@ export function MobilePackagesClient({ packages }: { packages: UserPackage[] }) 
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="font-semibold text-sm text-zinc-900 truncate">
-                    {p.name}
+                     {localizePackageName(p.name, t)}
                   </p>
                   <p className="flex items-center gap-1 text-xs text-zinc-500 mt-0.5">
                     <User className="w-3 h-3" />
@@ -101,14 +104,14 @@ export function MobilePackagesClient({ packages }: { packages: UserPackage[] }) 
                       : "bg-zinc-100 text-zinc-500"
                   )}
                 >
-                  {isActive ? "Active" : "Done"}
+                  {isActive ? t.packages.active : t.packages.completed}
                 </span>
               </div>
 
               {/* Sessions progress */}
               <div className="mt-2">
                 <div className="flex justify-between text-[10px] text-zinc-400 mb-1">
-                  <span>Sessions used</span>
+                  <span>{t.packages.sessionsUsed}</span>
                   <span>
                     {p.totalSessions - p.remainingSessions}/{p.totalSessions}
                   </span>
@@ -125,15 +128,15 @@ export function MobilePackagesClient({ packages }: { packages: UserPackage[] }) 
               <div className="mt-2 pt-2 border-t border-zinc-50 flex items-center justify-between text-xs">
                 <span className="flex items-center gap-1 text-zinc-500">
                   <Banknote className="w-3.5 h-3.5" />
-                  Paid {p.paidAmount} / {p.totalPrice} SAR
+                  {t.packages.paid} {p.paidAmount} / {p.totalPrice} {t.common.currency}
                 </span>
                 {balance > 0 && (
                   <span className="text-red-500 font-semibold">
-                    -{balance} SAR
+                    -{balance} {t.common.currency}
                   </span>
                 )}
                 {balance <= 0 && (
-                  <span className="text-green-600 font-semibold">Settled</span>
+                  <span className="text-green-600 font-semibold">{t.packages.settled}</span>
                 )}
               </div>
             </div>

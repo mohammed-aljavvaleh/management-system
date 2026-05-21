@@ -2,11 +2,10 @@
 
 import { useState, useMemo } from "react";
 import { format, isToday, isTomorrow, isYesterday } from "date-fns";
+import { tr, enUS } from "date-fns/locale";
 import { CheckCircle, XCircle, Clock, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLang } from "@/components/providers/language-provider";
-
-const { t } = useLang();
 
 type Appointment = {
   id: string;
@@ -28,24 +27,26 @@ interface Props {
   staff: Staff[];
 }
 
-const statusConfig = {
-  SCHEDULED: { label: "Scheduled", color: "bg-blue-100 text-blue-700", icon: Clock },
-  COMPLETED: { label: "Done", color: "bg-green-100 text-green-700", icon: CheckCircle },
-  CANCELLED: { label: "Cancelled", color: "bg-red-100 text-red-700", icon: XCircle },
-};
-
-function getDayLabel(date: Date) {
-  if (isToday(date)) return "Today";
-  if (isTomorrow(date)) return "Tomorrow";
-  if (isYesterday(date)) return "Yesterday";
-  return format(date, "EEE, MMM d");
-}
-
 export function MobileAppointmentsClient({ initialAppointments }: Props) {
+  const { t, lang } = useLang();
   const [appointments, setAppointments] = useState(initialAppointments);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"ALL" | "SCHEDULED" | "COMPLETED" | "CANCELLED">("ALL");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const statusConfig = useMemo(() => ({
+    SCHEDULED: { label: t.appointments.statuses.scheduled, color: "bg-blue-100 text-blue-700", icon: Clock },
+    COMPLETED: { label: t.appointments.statuses.completed, color: "bg-green-100 text-green-700", icon: CheckCircle },
+    CANCELLED: { label: t.appointments.statuses.cancelled, color: "bg-red-100 text-red-700", icon: XCircle },
+  }), [t]);
+
+  function getDayLabel(date: Date) {
+    if (isToday(date)) return t.common.today;
+    if (isTomorrow(date)) return t.common.tomorrow;
+    if (isYesterday(date)) return t.common.yesterday;
+    const locale = lang === "tr" ? tr : enUS;
+    return format(date, "EEE, MMM d", { locale });
+  }
 
   const filtered = useMemo(() => {
     return appointments.filter((a) => {
@@ -98,7 +99,7 @@ export function MobileAppointmentsClient({ initialAppointments }: Props) {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search appointments…"
+            placeholder={t.appointments.searchPlaceholder}
             className="w-full pl-9 pr-4 py-2 text-sm bg-zinc-50 border border-zinc-200 rounded-lg outline-none focus:ring-2 focus:ring-rose-300"
           />
         </div>
@@ -114,7 +115,7 @@ export function MobileAppointmentsClient({ initialAppointments }: Props) {
                   : "bg-zinc-100 text-zinc-500"
               )}
             >
-              {f === "ALL" ? "All" : statusConfig[f].label}
+              {f === "ALL" ? t.common.all : statusConfig[f].label}
             </button>
           ))}
         </div>
@@ -151,7 +152,7 @@ export function MobileAppointmentsClient({ initialAppointments }: Props) {
                           {a.service.name} · {a.staff.name}
                         </p>
                         <p className="text-xs text-zinc-400 mt-0.5">
-                          {format(time, "h:mm a")} · {a.service.duration} min
+                          {format(time, "h:mm a")} · {a.service.duration} {t.services.min}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1 flex-none">
@@ -165,7 +166,7 @@ export function MobileAppointmentsClient({ initialAppointments }: Props) {
                           {cfg?.label}
                         </span>
                         <span className="text-xs font-semibold text-zinc-700">
-                          {a.priceAtBooking} SAR
+                          {a.priceAtBooking} {t.common.currency}
                         </span>
                       </div>
                     </div>
@@ -179,7 +180,7 @@ export function MobileAppointmentsClient({ initialAppointments }: Props) {
                           className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-green-50 text-green-700 text-xs font-medium active:bg-green-100 disabled:opacity-50"
                         >
                           <CheckCircle className="w-3.5 h-3.5" />
-                          Mark Done
+                          {t.appointments.complete}
                         </button>
                         <button
                           disabled={updatingId === a.id}
@@ -187,7 +188,7 @@ export function MobileAppointmentsClient({ initialAppointments }: Props) {
                           className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-medium active:bg-red-100 disabled:opacity-50"
                         >
                           <XCircle className="w-3.5 h-3.5" />
-                          Cancel
+                          {t.appointments.cancel}
                         </button>
                       </div>
                     )}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/require-auth";
+import { getTranslations } from "@/lib/get-translations";
 
 export async function GET() {
   const auth = await requireApiSession();
@@ -14,7 +15,8 @@ export async function GET() {
     return NextResponse.json(services);
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    const t = await getTranslations();
+    return NextResponse.json({ error: t.apiErrors.fetchFailed }, { status: 500 });
   }
 }
 
@@ -22,21 +24,22 @@ export async function POST(req: NextRequest) {
   const auth = await requireApiSession();
   if (auth.response) return auth.response;
   const { salonId } = auth.session;
+  const t = await getTranslations();
   try {
     const { name, price, duration } = await req.json();
     if (!name || price == null || duration == null) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+      return NextResponse.json({ error: t.apiErrors.missingFields }, { status: 400 });
     }
 
     const parsedPrice = parseFloat(price);
     const parsedDuration = parseInt(duration);
 
     if (isNaN(parsedPrice) || parsedPrice <= 0 || parsedPrice > 100000) {
-      return NextResponse.json({ error: "Price must be between 0.01 and 100000" }, { status: 400 });
+      return NextResponse.json({ error: t.apiErrors.priceRange }, { status: 400 });
     }
 
     if (isNaN(parsedDuration) || parsedDuration <= 0 || parsedDuration > 480) {
-      return NextResponse.json({ error: "Duration must be between 1 and 480 minutes" }, { status: 400 });
+      return NextResponse.json({ error: t.apiErrors.durationRange }, { status: 400 });
     }
 
     const service = await prisma.service.create({
@@ -45,6 +48,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(service, { status: 201 });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: "Failed to create" }, { status: 500 });
+    return NextResponse.json({ error: t.apiErrors.createFailed }, { status: 500 });
   }
 }

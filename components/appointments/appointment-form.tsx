@@ -137,7 +137,12 @@ export function AppointmentForm({ services, staff }: Props) {
           body: JSON.stringify({ name: newName.trim(), phone: newPhone }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to create customer");
+        if (!res.ok) {
+          if (data.error === "Phone number is already registered") {
+            throw new Error(t.common.phoneExists ?? "Phone number is already registered");
+          }
+          throw new Error(data.error || "Failed to create customer");
+        }
         resolvedCustomerId = data.id;
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to create customer");
@@ -145,9 +150,9 @@ export function AppointmentForm({ services, staff }: Props) {
       }
     }
 
-    if (!resolvedCustomerId) { setError("Please select or create a customer"); return; }
-    if (!serviceId) { setError("Please select a service"); return; }
-    if (!staffId) { setError("Please select a staff member"); return; }
+    if (!resolvedCustomerId) { setError(t.appointmentForm.errors.customerRequired); return; }
+    if (!serviceId) { setError(t.appointmentForm.errors.serviceRequired); return; }
+    if (!staffId) { setError(t.appointmentForm.errors.staffRequired); return; }
 
     setLoading(true);
     try {
@@ -270,7 +275,7 @@ export function AppointmentForm({ services, staff }: Props) {
                     />
                     {searching && (
                       <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 6 }}>
-                        Searching...
+                        {t.common.searching}
                       </div>
                     )}
                     {visibleSearchResults.length > 0 && (
@@ -387,7 +392,7 @@ export function AppointmentForm({ services, staff }: Props) {
             {services.length === 0 && (
               <p style={{ color: "var(--muted-foreground)", fontSize: 13 }}>
                 {t.appointmentForm.noServices}{" "}
-                <Link href="/services" style={{ color: "var(--primary)" }}>Add services →</Link>
+                <Link href="/services" style={{ color: "var(--primary)" }}>{t.appointmentForm.addServices}</Link>
               </p>
             )}
           </section>
@@ -476,7 +481,7 @@ export function AppointmentForm({ services, staff }: Props) {
                     />
                     {installmentAmount !== "" && (
                       <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 5 }}>
-                        Remaining balance: ₺{Math.max(0, totalPrice - Number(installmentAmount)).toFixed(2)}
+                        {t.appointmentForm.remainingBalance} ₺{Math.max(0, totalPrice - Number(installmentAmount)).toFixed(2)}
                       </p>
                     )}
                   </div>
@@ -521,7 +526,7 @@ export function AppointmentForm({ services, staff }: Props) {
                 {staff.length === 0 && (
                   <p style={{ color: "var(--muted-foreground)", fontSize: 13 }}>
                     {t.appointmentForm.noStaff}
-                    <Link href="/staff" style={{ color: "var(--primary)" }}>Add staff →</Link>
+                    <Link href="/staff" style={{ color: "var(--primary)" }}>{t.appointmentForm.addStaff}</Link>
                   </p>
                 )}
               </div>
@@ -569,8 +574,12 @@ export function AppointmentForm({ services, staff }: Props) {
                 {isPackage ? ` · ${sessions} ${t.appointmentForm.packages}` : ` · ${selectedService.duration} ${t.services.min}`}
                 {date && time && (() => {
                   const d = new Date(`${date}T${time}:00`);
-                  const months = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
-                  return ` · ${d.getDate()} ${months[d.getMonth()]} ${t.appointmentForm.at} ${formatTime(time)}`;
+                  const monthKeys = [
+                    "january", "february", "march", "april", "may", "june",
+                    "july", "august", "september", "october", "november", "december"
+                  ] as const;
+                  const monthName = t.months[monthKeys[d.getMonth()]];
+                  return ` · ${d.getDate()} ${monthName} ${t.appointmentForm.at} ${formatTime(time)}`;
                 })()}
               </span>
               <div style={{ textAlign: "right" }}>
