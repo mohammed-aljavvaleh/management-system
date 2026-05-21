@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { requireApiSession } from "@/lib/require-auth";
 import { isAppointmentStatus, parseMoney, parseRequiredDate } from "@/lib/api-validation";
+import { getTranslations } from "@/lib/get-translations";
 
 export async function GET(
   _: NextRequest,
@@ -17,11 +18,15 @@ export async function GET(
       where: { id, salonId },
       include: { service: true, staff: true, customer: true, userPackage: true },
     });
-    if (!appointment) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!appointment) {
+      const t = await getTranslations();
+      return NextResponse.json({ error: t.apiErrors.notFound }, { status: 404 });
+    }
     return NextResponse.json(appointment);
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: "Failed to fetch appointment" }, { status: 500 });
+    const t = await getTranslations();
+    return NextResponse.json({ error: t.apiErrors.fetchAppointmentFailed }, { status: 500 });
   }
 }
 
@@ -32,6 +37,7 @@ export async function PATCH(
   const auth = await requireApiSession();
   if (auth.response) return auth.response;
   const { salonId } = auth.session;
+  const t = await getTranslations();
   try {
     const { id } = await params;
     const body = await req.json();
@@ -42,7 +48,7 @@ export async function PATCH(
         ? Number(body.installmentAmount)
         : 0;
       if (!Number.isFinite(installmentAmount) || installmentAmount < 0 || installmentAmount > 1_000_000) {
-        return NextResponse.json({ error: "Invalid installment amount" }, { status: 400 });
+        return NextResponse.json({ error: t.apiErrors.invalidInstallment }, { status: 400 });
       }
 
       const appointment = await prisma.$transaction(async (tx) => {
@@ -51,8 +57,8 @@ export async function PATCH(
           select: { userPackageId: true, status: true },
         });
 
-        if (!current) throw new Error("Appointment not found");
-        if (current.status === "COMPLETED") throw new Error("Already completed");
+        if (!current) throw new Error(t.apiErrors.notFound);
+        if (current.status === "COMPLETED") throw new Error(t.apiErrors.alreadyCompleted);
 
         const updatedRows = await tx.appointment.updateManyAndReturn({
           where: { id, salonId },
@@ -60,7 +66,7 @@ export async function PATCH(
           include: { service: true, staff: true, customer: true, userPackage: true },
         });
         const updated = updatedRows[0];
-        if (!updated) throw new Error("Appointment not found");
+        if (!updated) throw new Error(t.apiErrors.notFound);
 
         if (current.userPackageId) {
           const pkg = await tx.userPackage.findFirst({
@@ -125,12 +131,12 @@ export async function PATCH(
     // ── POSTPONE — reschedule startTime with overlap check ────────────
     if (body.action === "POSTPONE") {
       if (!body.startTime) {
-        return NextResponse.json({ error: "startTime is required to postpone" }, { status: 400 });
+        return NextResponse.json({ error: t.apiErrors.startTimeRequired }, { status: 400 });
       }
 
       const newStart = parseRequiredDate(body.startTime);
       if (!newStart) {
-        return NextResponse.json({ error: "Invalid startTime" }, { status: 400 });
+        return NextResponse.json({ error: t.apiErrors.invalidStartTime }, { status: 400 });
       }
 
       // Fetch current appointment to get staffId and service duration
@@ -138,7 +144,7 @@ export async function PATCH(
         where: { id, salonId },
         include: { service: true },
       });
-      if (!current) return NextResponse.json({ error: "Not found" }, { status: 404 });
+      if (!current) return NextResponse.json({ error: t.apiErrors.notFound }, { status: 404 });
 
       const newEnd = new Date(newStart.getTime() + current.service.duration * 60 * 1000);
       const longestService = await prisma.service.findFirst({
@@ -168,7 +174,7 @@ export async function PATCH(
         );
         if (conflict.startTime < newEnd && conflictEnd > newStart) {
           return NextResponse.json(
-            { error: "Bu personel üyesi zaten o zaman diliminde bir randevusu var." },
+            { error: t.apiErrors.staffTimeConflict },
             { status: 409 }
           );
         }
@@ -183,7 +189,7 @@ export async function PATCH(
         include: { service: true, staff: true, customer: true, userPackage: true },
       });
       const appointment = appointments[0];
-      if (!appointment) return NextResponse.json({ error: "Not found" }, { status: 404 });
+      if (!appointment) return NextResponse.json({ error: t.apiErrors.notFound }, { status: 404 });
       return NextResponse.json(appointment);
     }
 
@@ -191,7 +197,7 @@ export async function PATCH(
     const data: Record<string, unknown> = {};
     if (body.startTime !== undefined) {
       const parsedStart = parseRequiredDate(body.startTime);
-      if (!parsedStart) return NextResponse.json({ error: "Invalid startTime" }, { status: 400 });
+      if (!parsedStart) return NextResponse.json({ error: t.apiErrors.invalidStartTime }, { status: 400 });
       data.startTime = parsedStart;
     }
     if (body.serviceId !== undefined) {
@@ -199,7 +205,7 @@ export async function PATCH(
         where: { id: body.serviceId, salonId },
         select: { id: true },
       });
-      if (!service) return NextResponse.json({ error: "Service not found" }, { status: 404 });
+      if (!service) return NextResponse.json({ error: t.apiErrors.serviceNotFound }, { status: 404 });
       data.serviceId = body.serviceId;
     }
     if (body.staffId !== undefined) {
@@ -207,12 +213,12 @@ export async function PATCH(
         where: { id: body.staffId, salonId },
         select: { id: true },
       });
-      if (!staff) return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
+      if (!staff) return NextResponse.json({ error: t.apiErrors.staffNotFound }, { status: 404 });
       data.staffId = body.staffId;
     }
     if (body.status !== undefined) {
       if (!isAppointmentStatus(body.status)) {
-        return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+        return NextResponse.json({ error: t.apiErrors.invalidStatus }, { status: 400 });
       }
       data.status = body.status;
     }
@@ -220,7 +226,7 @@ export async function PATCH(
     if (body.priceAtBooking !== undefined) {
       const priceAtBooking = parseMoney(body.priceAtBooking);
       if (priceAtBooking === null) {
-        return NextResponse.json({ error: "Invalid priceAtBooking" }, { status: 400 });
+        return NextResponse.json({ error: t.apiErrors.invalidPrice }, { status: 400 });
       }
       data.priceAtBooking = priceAtBooking;
     }
@@ -231,12 +237,12 @@ export async function PATCH(
       include: { service: true, staff: true, customer: true, userPackage: true },
     });
     const appointment = appointments[0];
-    if (!appointment) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!appointment) return NextResponse.json({ error: t.apiErrors.notFound }, { status: 404 });
     revalidatePath("/dashboard");
     return NextResponse.json(appointment);
   } catch (err) {
     console.error(err);
-    const message = err instanceof Error ? err.message : "Failed to update";
+    const message = err instanceof Error ? err.message : t.apiErrors.updateFailed;
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -251,10 +257,14 @@ export async function DELETE(
   try {
     const { id } = await params;
     const result = await prisma.appointment.deleteMany({ where: { id, salonId } });
-    if (result.count === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (result.count === 0) {
+      const t = await getTranslations();
+      return NextResponse.json({ error: t.apiErrors.notFound }, { status: 404 });
+    }
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: "Failed to delete" }, { status: 500 });
+    const t = await getTranslations();
+    return NextResponse.json({ error: t.apiErrors.deleteFailed }, { status: 500 });
   }
 }

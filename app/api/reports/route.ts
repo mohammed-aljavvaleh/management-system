@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/require-auth";
+import { getTranslations } from "@/lib/get-translations";
 
 export async function GET(req: NextRequest) {
   const auth = await requireApiSession();
@@ -76,6 +77,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    const t = await getTranslations();
+    return NextResponse.json({ error: t.apiErrors.failed }, { status: 500 });
   }
 }
