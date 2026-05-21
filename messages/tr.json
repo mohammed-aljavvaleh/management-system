@@ -93,6 +93,8 @@
     "paymentNow": "Şimdi Ödeme (isteğe bağlı)",
     "sessionsLeftSummary": "{remaining}/{total} seans kaldı",
     "paidSummary": "Ödenen",
+    "searchResults": "\"{query}\" için {count} sonuç bulundu",
+    "searchResultOne": "\"{query}\" için 1 sonuç bulundu",
     "invalidPaymentAmount": "Geçersiz ödeme tutarı",
     "paymentCannotExceed": "Ödeme ₺{amount} tutarını aşamaz",
     "finalSessionMustMatch": "Son seans ödemesi ₺{amount} ile eşleşmelidir",
