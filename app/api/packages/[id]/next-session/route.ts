@@ -122,6 +122,21 @@ export async function POST(
       return NextResponse.json({ error: t.apiErrors.invalidInstallment }, { status: 400 });
     }
 
+    const remainingBalance = Math.max(0, pkg.totalPrice - pkg.paidAmount);
+    if (paidNow > remainingBalance) {
+      return NextResponse.json(
+        { error: "Installment amount cannot exceed remaining debt" },
+        { status: 400 }
+      );
+    }
+
+    if (pkg.remainingSessions === 1 && Math.abs(paidNow - remainingBalance) > 0.009) {
+      return NextResponse.json(
+        { error: "Final session payment must equal the remaining balance" },
+        { status: 400 }
+      );
+    }
+
     const appointment = await prisma.$transaction(async (tx) => {
       const freshPkg = await tx.userPackage.findFirst({
         where: { id: packageId, salonId },
@@ -143,6 +158,11 @@ export async function POST(
           userPackageId: packageId,
         },
         include: { service: true, staff: true, customer: true, userPackage: true },
+      });
+
+      await tx.userPackage.updateMany({
+        where: { id: packageId, salonId },
+        data: { remainingSessions: { decrement: 1 } },
       });
 
       if (paidNow > 0) {
