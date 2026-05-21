@@ -137,6 +137,8 @@
     "paymentNow": "Payment Now (optional)",
     "sessionsLeftSummary": "{remaining}/{total} sessions left",
     "paidSummary": "Paid",
+    "searchResults": "Found {count} results for \"{query}\"",
+    "searchResultOne": "Found 1 result for \"{query}\"",
     "invalidPaymentAmount": "Invalid payment amount",
     "paymentCannotExceed": "Payment cannot exceed ₺{amount}",
     "finalSessionMustMatch": "Final session payment must equal ₺",
