@@ -153,6 +153,7 @@
     "fullNamePlaceholder": "e.g. Sarah Johnson",
     "phoneNumber": "Phone Number",
     "validNumber": "✓ Valid phone number",
+    "availableNumber": "✓ Phone number is available",
     "phonePlaceholder": "+1 555 000 0000",
     "phoneNumberRules": "Must start with 05 · exactly 11 digits",
     "serviceStaff": "Service & Staff",
