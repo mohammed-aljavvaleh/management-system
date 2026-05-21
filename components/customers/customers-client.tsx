@@ -18,9 +18,11 @@ type Customer = {
 function CreateCustomerDialog({
   onClose,
   onSaved,
+  customers,
 }: {
   onClose: () => void;
   onSaved: (customer: Customer) => void;
+  customers: Customer[];
 }) {
   const { t } = useLang();
   const [name, setName] = useState("");
@@ -77,7 +79,11 @@ function CreateCustomerDialog({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Failed to create customer");
+        if (data.error === "Phone number is already registered") {
+          setError(t.common.phoneExists ?? "Phone number is already registered");
+        } else {
+          setError(data.error ?? "Failed to create customer");
+        }
         return;
       }
       onSaved(data);
@@ -126,7 +132,7 @@ function CreateCustomerDialog({
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Sarah Johnson"
+            placeholder={t.appointmentForm.fullNamePlaceholder}
             style={{
               width: "100%",
               padding: "8px 12px",
@@ -145,7 +151,9 @@ function CreateCustomerDialog({
 
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 6, color: "var(--muted-foreground)" }}>
-            {t.common.phone ?? "Phone"}
+            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <Phone size={11} /> {t.appointmentForm.phoneNumber}
+            </span>
           </label>
           <input
             type="tel"
@@ -170,6 +178,16 @@ function CreateCustomerDialog({
               color: "var(--foreground)",
               outline: "none",
               boxSizing: "border-box",
+              borderColor: (() => {
+                if (phone.length === 0) return "var(--border)";
+                if (!phone.startsWith("05")) return "#c45c5c";
+
+                const hasMatchingPrefix = customers.some((c) => c.phone.startsWith(phone));
+                if (phone.length === 11) {
+                  return hasMatchingPrefix ? "#c45c5c" : "#2d7a2d";
+                }
+                return !hasMatchingPrefix ? "#2d7a2d" : "var(--border)";
+              })(),
             }}
             onFocus={(e) => (e.currentTarget.style.borderColor = "var(--primary)")}
             onBlur={(e) => {
@@ -223,14 +241,14 @@ function CreateCustomerDialog({
           </button>
           <button
             onClick={handleCreate}
-            disabled={saving}
+            disabled={saving || !name.trim() || !!phoneError || phone.length !== 11}
             style={{
               padding: "8px 16px",
-              background: saving ? "var(--muted)" : "var(--primary)",
-              color: saving ? "var(--muted-foreground)" : "white",
+              background: (saving || !name.trim() || !!phoneError || phone.length !== 11) ? "var(--muted)" : "var(--primary)",
+              color: (saving || !name.trim() || !!phoneError || phone.length !== 11) ? "var(--muted-foreground)" : "white",
               border: "none",
               borderRadius: 6,
-              cursor: saving ? "default" : "pointer",
+              cursor: (saving || !name.trim() || !!phoneError || phone.length !== 11) ? "default" : "pointer",
               fontSize: 13,
               fontWeight: 500,
             }}
@@ -348,7 +366,9 @@ export function CustomersClient({ customers: initialCustomers }: { customers: Cu
       {/* Results count when searching */}
       {query.trim() && (
         <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12 }}>
-          {filtered.length} result{filtered.length !== 1 ? "s" : ""} for &ldquo;{query.trim()}&rdquo;
+          {filtered.length === 1
+            ? t.customers.searchResultOne.replace("{query}", query.trim())
+            : t.customers.searchResults.replace("{count}", String(filtered.length)).replace("{query}", query.trim())}
         </p>
       )}
 
@@ -450,6 +470,7 @@ export function CustomersClient({ customers: initialCustomers }: { customers: Cu
             setCustomers([...customers, newCustomer].sort((a, b) => a.name.localeCompare(b.name)));
             setShowCreateDialog(false);
           }}
+          customers={customers}
         />
       )}
     </div>

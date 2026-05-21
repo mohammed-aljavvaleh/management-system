@@ -11,6 +11,7 @@ import {
 import { useLang } from "@/components/providers/language-provider";
 import { format } from "date-fns";
 import { tr, enUS } from "date-fns/locale";
+import { localizePackageName, localizeInstallmentNote } from "@/lib/package-utils";
 
 type CustomerWithDetails = Prisma.CustomerGetPayload<{
   include: {
@@ -146,7 +147,7 @@ export function CustomerProfileClient({
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: 14.5 }}>{pkg.name}</div>
+                      <div style={{ fontWeight: 600, fontSize: 14.5 }}>{localizePackageName(pkg.name, t)}</div>
                       <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>
                         {t.customers.started} {fmt(pkg.createdAt, "d MMM yyyy")}
                         {pkg.service && (
@@ -296,7 +297,7 @@ export function CustomerProfileClient({
                 borderRadius: 10, opacity: 0.7,
               }}>
                 <div>
-                  <div style={{ fontWeight: 500, fontSize: 13.5 }}>{pkg.name}</div>
+                  <div style={{ fontWeight: 500, fontSize: 13.5 }}>{localizePackageName(pkg.name, t)}</div>
                   <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                     {t.customers.completedSessions.replace("{total}", String(pkg.totalSessions))}
                   </div>
@@ -743,7 +744,7 @@ function ScheduleNextSessionDialog({
               {t.customers.scheduleNext}
             </h3>
             <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", marginBottom: 4 }}>
-              {pkg.name}
+              {localizePackageName(pkg.name, t)}
             </p>
             {pkg.service && (
               <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", marginBottom: 20 }}>

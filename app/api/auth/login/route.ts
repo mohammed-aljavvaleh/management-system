@@ -1,10 +1,8 @@
-// app/api/auth/login/route.ts
-// Updated: salonId is now written to the session on every successful login.
-
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import bcrypt from "bcryptjs";
+import { getTranslations } from "@/lib/get-translations";
 
 // Simple in-memory rate limiting: 5 attempts per minute per IP
 const loginAttempts = new Map<string, { count: number; resetTime: number }>();
@@ -30,17 +28,18 @@ function checkRateLimit(ip: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  const t = await getTranslations();
   const ip = getClientIp(req);
   if (!checkRateLimit(ip)) {
     return NextResponse.json(
-      { error: "Too many login attempts. Try again in 1 minute." },
+      { error: t.apiErrors.tooManyAttempts },
       { status: 429 }
     );
   }
 
   const { username, password } = await req.json();
   if (!username || !password) {
-    return NextResponse.json({ error: "Missing fields." }, { status: 400 });
+    return NextResponse.json({ error: t.apiErrors.missingFields }, { status: 400 });
   }
   const normalizedUsername = String(username).trim();
 
@@ -51,12 +50,12 @@ export async function POST(req: NextRequest) {
   });
 
   if (!admin) {
-    return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
+    return NextResponse.json({ error: t.apiErrors.invalidCredentials }, { status: 401 });
   }
 
   const valid = await bcrypt.compare(password, admin.passwordHash);
   if (!valid) {
-    return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
+    return NextResponse.json({ error: t.apiErrors.invalidCredentials }, { status: 401 });
   }
 
   // ── Write tenant context to session ───────────────────────────────────────

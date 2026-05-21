@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/require-auth";
 import { revalidatePath } from "next/cache";
 import { isAppointmentStatus, parsePositiveMoney, parseRequiredDate } from "@/lib/api-validation";
+import { getTranslations } from "@/lib/get-translations";
 
 export async function GET(req: NextRequest) {
   const auth = await requireApiSession();
@@ -16,9 +17,10 @@ export async function GET(req: NextRequest) {
 
     const where: Record<string, unknown> = { salonId };
 
+    const t = await getTranslations();
     if (dateParam) {
       const date = parseRequiredDate(dateParam);
-      if (!date) return NextResponse.json({ error: "Invalid date" }, { status: 400 });
+      if (!date) return NextResponse.json({ error: t.apiErrors.invalidDate }, { status: 400 });
       const nextDay = new Date(date);
       nextDay.setDate(nextDay.getDate() + 1);
       where.startTime = { gte: date, lt: nextDay };
@@ -26,7 +28,7 @@ export async function GET(req: NextRequest) {
     if (staffId) where.staffId = staffId;
     if (status) {
       if (!isAppointmentStatus(status)) {
-        return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+        return NextResponse.json({ error: t.apiErrors.invalidStatus }, { status: 400 });
       }
       where.status = status;
     }
@@ -40,7 +42,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(appointments);
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: "Failed to fetch appointments" }, { status: 500 });
+    const t = await getTranslations();
+    return NextResponse.json({ error: t.apiErrors.fetchFailed }, { status: 500 });
   }
 }
 
@@ -48,6 +51,7 @@ export async function POST(req: NextRequest) {
   const auth = await requireApiSession();
   if (auth.response) return auth.response;
   const { salonId } = auth.session;
+  const t = await getTranslations();
   try {
     const body = await req.json();
     const {
@@ -61,12 +65,12 @@ export async function POST(req: NextRequest) {
     } = body;
 
     if (!customerId || !startTime || !serviceId || !staffId) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return NextResponse.json({ error: t.apiErrors.missingFields }, { status: 400 });
     }
 
     const parsedStartTime = parseRequiredDate(startTime);
     if (!parsedStartTime) {
-      return NextResponse.json({ error: "Invalid start time" }, { status: 400 });
+      return NextResponse.json({ error: t.apiErrors.invalidStartTime }, { status: 400 });
     }
 
     const sessionCount = Math.max(1, Number(sessions) || 1);
@@ -82,9 +86,9 @@ export async function POST(req: NextRequest) {
       }),
     ]);
 
-    if (!customer) return NextResponse.json({ error: "Customer not found" }, { status: 404 });
-    if (!service) return NextResponse.json({ error: "Service not found" }, { status: 404 });
-    if (!staffMember) return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
+    if (!customer) return NextResponse.json({ error: t.apiErrors.customerNotFound }, { status: 404 });
+    if (!service) return NextResponse.json({ error: t.apiErrors.serviceNotFound }, { status: 404 });
+    if (!staffMember) return NextResponse.json({ error: t.apiErrors.staffNotFound }, { status: 404 });
 
     // ── Overlap check ─────────────────────────────────────────────────
     const apptStart = parsedStartTime;
@@ -110,7 +114,7 @@ export async function POST(req: NextRequest) {
       );
       if (conflict.startTime < apptEnd && conflictEnd > apptStart) {
         return NextResponse.json(
-          { error: "Bu personel üyesi zaten o zaman diliminde bir randevusu var." },
+          { error: t.apiErrors.staffTimeConflict },
           { status: 409 }
         );
       }
@@ -122,10 +126,10 @@ export async function POST(req: NextRequest) {
 
     // Validate prices
     if (parsePositiveMoney(totalPrice) === null) {
-      return NextResponse.json({ error: "Invalid total price" }, { status: 400 });
+      return NextResponse.json({ error: t.apiErrors.invalidPrice }, { status: 400 });
     }
     if (!Number.isFinite(paidNow) || paidNow < 0 || paidNow > totalPrice) {
-      return NextResponse.json({ error: "Invalid installment amount" }, { status: 400 });
+      return NextResponse.json({ error: t.apiErrors.invalidInstallment }, { status: 400 });
     }
 
     // Single session — no package needed
@@ -196,6 +200,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: "Failed to create appointment" }, { status: 500 });
+    return NextResponse.json({ error: t.apiErrors.createFailed }, { status: 500 });
   }
 }
