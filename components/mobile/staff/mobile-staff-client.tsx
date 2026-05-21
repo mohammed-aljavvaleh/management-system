@@ -1,6 +1,7 @@
 "use client";
 
 import { UserCheck, CalendarDays } from "lucide-react";
+import { useLang } from "@/components/providers/language-provider";
 
 type Staff = {
   id: string;
@@ -10,11 +11,12 @@ type Staff = {
 };
 
 export function MobileStaffClient({ staff }: { staff: Staff[] }) {
+  const { t } = useLang();
   return (
     <div className="px-4 py-3 space-y-2">
       {staff.length === 0 && (
         <div className="text-center text-zinc-400 text-sm py-12">
-          No staff yet
+          {t.staff.noStaff}
         </div>
       )}
       {staff.map((s) => (
@@ -33,7 +35,7 @@ export function MobileStaffClient({ staff }: { staff: Staff[] }) {
           </div>
           <span className="flex items-center gap-1 text-xs text-zinc-500">
             <CalendarDays className="w-3.5 h-3.5" />
-            {s._count.appointments} appts
+            {s._count.appointments} {t.staff.appointments}
           </span>
         </div>
       ))}
