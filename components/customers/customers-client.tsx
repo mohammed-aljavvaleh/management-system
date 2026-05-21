@@ -221,7 +221,7 @@ function CreateCustomerDialog({
                     : t.appointmentForm.validNumber;
                 }
                 return !hasMatchingPrefix
-                  ? (t.appointmentForm.availableNumber ?? "✓ Phone number is available")
+                  ? ((t.appointmentForm as any).availableNumber ?? "✓ Phone number is available")
                   : t.appointmentForm.phoneNumberRules;
               })()}
             </span>
