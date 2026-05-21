@@ -71,18 +71,14 @@ export async function PATCH(
         if (current.userPackageId) {
           const pkg = await tx.userPackage.findFirst({
             where: { id: current.userPackageId, salonId },
-            select: { remainingSessions: true, paidAmount: true },
+            select: { paidAmount: true },
           });
 
-          if (!pkg) throw new Error(t.apiErrors.packageNotFound);
-          if (pkg.remainingSessions <= 0) throw new Error(t.apiErrors.noRemainingSessions);
+          if (!pkg) throw new Error("Package not found");
 
           await tx.userPackage.updateMany({
             where: { id: current.userPackageId, salonId },
-            data: {
-              remainingSessions: { decrement: 1 },
-              paidAmount: { increment: installmentAmount },
-            },
+            data: { paidAmount: { increment: installmentAmount } },
           });
 
           if (installmentAmount > 0) {
@@ -96,6 +92,36 @@ export async function PATCH(
           }
         }
 
+        return updated;
+      });
+      revalidatePath("/dashboard");
+      return NextResponse.json(appointment);
+    }
+
+    // ── CANCELLED — restore a package session if needed ───────────────
+    if (body.status === "CANCELLED") {
+      const appointment = await prisma.$transaction(async (tx) => {
+        const current = await tx.appointment.findFirst({
+          where: { id, salonId },
+          select: { userPackageId: true, status: true },
+        });
+
+        if (!current) throw new Error("Appointment not found");
+
+        if (current.status !== "CANCELLED" && current.userPackageId) {
+          await tx.userPackage.updateMany({
+            where: { id: current.userPackageId, salonId },
+            data: { remainingSessions: { increment: 1 } },
+          });
+        }
+
+        const updatedRows = await tx.appointment.updateManyAndReturn({
+          where: { id, salonId },
+          data: { status: "CANCELLED" },
+          include: { service: true, staff: true, customer: true, userPackage: true },
+        });
+        const updated = updatedRows[0];
+        if (!updated) throw new Error("Appointment not found");
         return updated;
       });
       revalidatePath("/dashboard");

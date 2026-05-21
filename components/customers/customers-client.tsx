@@ -43,7 +43,6 @@ function CreateCustomerDialog({
       return;
     }
 
-    const hasMatchingPrefix = customers.some((c) => c.phone.startsWith(digits));
     if (digits.length < 11) {
       setPhoneError(""); // Clear any blocking errors while typing
     } else {
@@ -57,29 +56,34 @@ function CreateCustomerDialog({
     }
   }
 
-  async function handleCreate() {
-    if (!name.trim()) {
-      setError(t.appointmentForm.errors.nameRequired ?? "Customer name is required");
-      return;
-    }
+  function validatePhone(): boolean {
     if (phone.length === 0) {
       setPhoneError(t.appointmentForm.errors.phoneRequired);
-      return;
+      return false;
     }
     if (!phone.startsWith("05")) {
       setPhoneError(t.appointmentForm.errors.phoneMustStart);
-      return;
+      return false;
     }
     if (phone.length !== 11) {
       setPhoneError(t.appointmentForm.errors.PhoneTooShort);
-      return;
+      return false;
     }
     const isExactMatch = customers.some((c) => c.phone === phone);
     if (isExactMatch) {
       setPhoneError(t.common.phoneExists ?? "Phone number is already registered");
+      return false;
+    }
+    return true;
+  }
+
+  async function handleCreate() {
+    setError("");
+    if (!name.trim()) {
+      setError(t.common.requiredFields ?? "All fields are required");
       return;
     }
-    if (phoneError) return;
+    if (!validatePhone()) return;
 
     setSaving(true);
     setError("");
@@ -195,6 +199,8 @@ function CreateCustomerDialog({
                 return !hasMatchingPrefix ? "#2d7a2d" : "var(--border)";
               })(),
             }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = "var(--primary)")}
+            onBlur={(e) => (e.currentTarget.style.borderColor = "")}
           />
           <div style={{ marginTop: 5, minHeight: 18, display: "flex", justifyContent: "space-between" }}>
             <span style={{

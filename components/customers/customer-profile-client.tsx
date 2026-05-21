@@ -53,6 +53,14 @@ export function CustomerProfileClient({
     0
   );
 
+  const translateInstallmentNote = (note?: string | null) => {
+    if (!note) return "";
+    if (note === "Paid at booking") return t.customers.paidAtBooking;
+    if (note === "Session payment") return t.customers.sessionPayment;
+    if (note === "Advance payment for next session") return t.customers.advancePaymentForNextSession;
+    return note;
+  };
+
   return (
     <div className="admin-page" style={{ padding: "32px 36px", maxWidth: 820 }}>
 
@@ -222,7 +230,7 @@ export function CustomerProfileClient({
                           <div key={inst.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                             <span style={{ color: "var(--muted-foreground)" }}>
                               {fmt(inst.paidAt, "dd MMMM yyyy")}
-                              {inst.note && ` · ${localizeInstallmentNote(inst.note, t)}`}
+                              {inst.note && ` · ${translateInstallmentNote(inst.note)}`}
                             </span>
                             <strong style={{ color: "var(--primary)" }}>₺{inst.amount.toFixed(2)}</strong>
                           </div>
@@ -384,7 +392,7 @@ function AppointmentHistoryRow({
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {/* Note toggle button */}
           <button
-            title={notes ? "Edit note" : "Add note"}
+            title={notes ? t.appointments.editNote : t.appointments.addNote}
             onClick={() => { setNoteDraft(notes); setEditingNote(true); }}
             style={{
               background: "none", border: "none", cursor: "pointer", padding: 4,
@@ -520,11 +528,11 @@ function CustomerNotesCard({
         </h3>
         {!editing && (
           <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => { setDraft(notes); setEditing(true); }} style={iconBtnStyle} title="Edit note">
+            <button onClick={() => { setDraft(notes); setEditing(true); }} style={iconBtnStyle} title={t.appointments.editNote}>
               <Pencil size={13} />
             </button>
             {notes && (
-              <button onClick={clearNotes} disabled={saving} style={{ ...iconBtnStyle, color: "#c45c5c" }} title="Remove note">
+              <button onClick={clearNotes} disabled={saving} style={{ ...iconBtnStyle, color: "#c45c5c" }} title={t.customers.removeNoteConfirm}>
                 <Trash2 size={13} />
               </button>
             )}
@@ -603,6 +611,13 @@ type PackageForNextSession = {
   service?: { id: string; name: string; price: number; duration: number } | null;
 };
 
+const TIME_SLOTS = [
+  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+  "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
+  "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
+  "18:00",
+];
+
 function ScheduleNextSessionDialog({
   pkg,
   staffList,
@@ -621,7 +636,12 @@ function ScheduleNextSessionDialog({
   const [dateStr, setDateStr] = useState(tomorrow.toISOString().slice(0, 10));
   const [timeStr, setTimeStr] = useState("10:00");
   const [staffId, setStaffId] = useState(staffList?.[0]?.id ?? "");
-  const [installmentAmount, setInstallmentAmount] = useState("");
+
+  const balance = Math.max(0, pkg.totalPrice - pkg.paidAmount);
+  const isFinalSession = pkg.remainingSessions === 1;
+  const [installmentAmount, setInstallmentAmount] = useState(
+    isFinalSession ? balance.toFixed(2) : ""
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -630,6 +650,30 @@ function ScheduleNextSessionDialog({
     if (!staffId || !dateStr || !timeStr) return;
     setSaving(true);
     setError("");
+
+    const payment = installmentAmount ? Number(installmentAmount) : 0;
+    if (Number.isNaN(payment) || payment < 0) {
+      setError(t.customers.invalidPaymentAmount);
+      setSaving(false);
+      return;
+    }
+
+    if (payment > balance) {
+      setError(
+        t.customers.paymentCannotExceed.replace("{amount}", balance.toFixed(2))
+      );
+      setSaving(false);
+      return;
+    }
+
+    if (isFinalSession && Math.abs(payment - balance) > 0.009) {
+      setError(
+        t.customers.finalSessionMustMatch.replace("{amount}", balance.toFixed(2))
+      );
+      setSaving(false);
+      return;
+    }
+
     try {
       const startTime = new Date(`${dateStr}T${timeStr}`).toISOString();
       const res = await fetch(`/api/packages/${pkg.id}/next-session`, {
@@ -638,12 +682,12 @@ function ScheduleNextSessionDialog({
         body: JSON.stringify({
           startTime,
           staffId,
-          installmentAmount: installmentAmount ? Number(installmentAmount) : 0,
+          installmentAmount: payment,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Failed to schedule");
+        setError(data.error ?? t.customers.failedToSchedule);
         return;
       }
       setSuccess(true);
@@ -720,7 +764,17 @@ function ScheduleNextSessionDialog({
                 </div>
                 <div style={{ marginBottom: 14 }}>
                   <label style={labelStyle}>{t.appointmentForm.timeSlot}</label>
-                  <input type="time" value={timeStr} onChange={(e) => setTimeStr(e.target.value)} style={fullInputStyle} />
+                  <select 
+                    value={timeStr} 
+                    onChange={(e) => setTimeStr(e.target.value)} 
+                    style={fullInputStyle}
+                  >
+                    {TIME_SLOTS.map((slot) => (
+                      <option key={slot} value={slot}>
+                        {slot}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div style={{ marginBottom: 14 }}>
                   <label style={labelStyle}>{t.appointmentForm.staffMember}</label>
@@ -733,11 +787,24 @@ function ScheduleNextSessionDialog({
                 <div style={{ marginBottom: 16 }}>
                   <label style={labelStyle}>{t.customers.paymentNow}</label>
                   <input
-                    type="number" min={0} placeholder="₺0"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder="₺0"
                     value={installmentAmount}
-                    onChange={(e) => setInstallmentAmount(e.target.value)}
+                    onChange={(e) => {
+                      if (!isFinalSession) {
+                        setInstallmentAmount(e.target.value);
+                      }
+                    }}
+                    disabled={isFinalSession}
                     style={fullInputStyle}
                   />
+                  <div style={{ marginTop: 6, fontSize: 12.5, color: "var(--muted-foreground)" }}>
+                    {isFinalSession
+                      ? `${t.customers.finalSessionPaymentNote}: ₺${balance.toFixed(2)}`
+                      : `${t.customers.maximumPaymentNote}: ₺${balance.toFixed(2)}`}
+                  </div>
                 </div>
 
                 {/* Package balance summary */}
