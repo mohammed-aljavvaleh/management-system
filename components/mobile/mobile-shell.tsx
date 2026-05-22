@@ -10,17 +10,19 @@ import {
   Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const tabs = [
-  { href: "/mobile/appointments", label: "Appointments", icon: CalendarDays },
-  { href: "/mobile/customers", label: "Customers", icon: Users },
-  { href: "/mobile/services", label: "Services", icon: Scissors },
-  { href: "/mobile/staff", label: "Staff", icon: UserCheck },
-  { href: "/mobile/packages", label: "Packages", icon: Package },
-];
+import { useLang } from "@/components/providers/language-provider";
 
 export function MobileShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { t } = useLang();
+
+  const tabs = [
+    { href: "/mobile/appointments", label: t.nav.appointments, icon: CalendarDays },
+    { href: "/mobile/customers", label: t.nav.customers, icon: Users },
+    { href: "/mobile/services", label: t.nav.services, icon: Scissors },
+    { href: "/mobile/staff", label: t.nav.staff, icon: UserCheck },
+    { href: "/mobile/packages", label: t.nav.packages, icon: Package },
+  ];
 
   return (
     <div className="flex flex-col h-full bg-zinc-50">
@@ -29,7 +31,7 @@ export function MobileShell({ children }: { children: React.ReactNode }) {
         <h1 className="text-base font-semibold text-zinc-900 tracking-tight">
           Lamees Nail Salon
         </h1>
-        <span className="text-xs text-zinc-400 font-medium">Staff</span>
+        <span className="text-xs text-zinc-400 font-medium">{t.nav.staff}</span>
       </header>
 
       {/* Page content */}

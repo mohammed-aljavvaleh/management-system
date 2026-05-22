@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { User, Phone, Calendar, Package, Search, X } from "lucide-react";
+import { User, Phone, Calendar, Package, Search, X, Plus } from "lucide-react";
 import { useLang } from "@/components/providers/language-provider";
 
 type Customer = {
@@ -13,9 +13,288 @@ type Customer = {
   packages: { remainingSessions: number; totalSessions: number }[];
 };
 
-export function CustomersClient({ customers }: { customers: Customer[] }) {
+// ── Create Customer Dialog ───────────────────────────────────────────────────
+
+function CreateCustomerDialog({
+  onClose,
+  onSaved,
+  customers,
+}: {
+  onClose: () => void;
+  onSaved: (customer: Customer) => void;
+  customers: Customer[];
+}) {
+  const { t } = useLang();
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  function handlePhoneChange(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    setPhone(digits);
+    if (digits.length === 0) {
+      setPhoneError(t.appointmentForm.errors.phoneRequired);
+      return;
+    }
+    if (!digits.startsWith("05")) {
+      setPhoneError(t.appointmentForm.errors.phoneMustStart);
+      return;
+    }
+
+    if (digits.length < 11) {
+      setPhoneError(""); // Clear any blocking errors while typing
+    } else {
+      // Exactly 11 digits
+      const isExactMatch = customers.some((c) => c.phone === digits);
+      if (isExactMatch) {
+        setPhoneError(t.common.phoneExists ?? "Phone number is already registered");
+      } else {
+        setPhoneError("");
+      }
+    }
+  }
+
+  function validatePhone(): boolean {
+    if (phone.length === 0) {
+      setPhoneError(t.appointmentForm.errors.phoneRequired);
+      return false;
+    }
+    if (!phone.startsWith("05")) {
+      setPhoneError(t.appointmentForm.errors.phoneMustStart);
+      return false;
+    }
+    if (phone.length !== 11) {
+      setPhoneError(t.appointmentForm.errors.PhoneTooShort);
+      return false;
+    }
+    const isExactMatch = customers.some((c) => c.phone === phone);
+    if (isExactMatch) {
+      setPhoneError(t.common.phoneExists ?? "Phone number is already registered");
+      return false;
+    }
+    return true;
+  }
+
+  async function handleCreate() {
+    setError("");
+    if (!name.trim()) {
+      setError(t.common.requiredFields ?? "All fields are required");
+      return;
+    }
+    if (!validatePhone()) return;
+
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), phone }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.error === "Phone number is already registered") {
+          setError(t.common.phoneExists ?? "Phone number is already registered");
+        } else {
+          setError(data.error ?? "Failed to create customer");
+        }
+        return;
+      }
+      onSaved(data);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: "rgba(0,0,0,0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          borderRadius: 12,
+          padding: "24px",
+          width: "90%",
+          maxWidth: 400,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>
+          {t.customers.newCustomer ?? "New Customer"}
+        </h2>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 6, color: "var(--muted-foreground)" }}>
+            {t.common.name ?? "Name"}
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t.appointmentForm.fullNamePlaceholder}
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              fontSize: 13.5,
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              background: "var(--background)",
+              color: "var(--foreground)",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = "var(--primary)")}
+            onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+          />
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 6, color: "var(--muted-foreground)" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <Phone size={11} /> {t.appointmentForm.phoneNumber}
+            </span>
+          </label>
+          <input
+            type="tel"
+            inputMode="numeric"
+            value={phone}
+            onChange={(e) => handlePhoneChange(e.target.value)}
+            placeholder="05XXXXXXXXX"
+            maxLength={11}
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              fontSize: 13.5,
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              background: "var(--background)",
+              color: "var(--foreground)",
+              outline: "none",
+              boxSizing: "border-box",
+              borderColor: (() => {
+                if (phone.length === 0) return "var(--border)";
+                if (!phone.startsWith("05")) return "#c45c5c";
+
+                const hasMatchingPrefix = customers.some((c) => c.phone.startsWith(phone));
+                if (phone.length === 11) {
+                  return hasMatchingPrefix ? "#c45c5c" : "#2d7a2d";
+                }
+                return !hasMatchingPrefix ? "#2d7a2d" : "var(--border)";
+              })(),
+            }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = "var(--primary)")}
+            onBlur={(e) => (e.currentTarget.style.borderColor = "")}
+          />
+          <div style={{ marginTop: 5, minHeight: 18, display: "flex", justifyContent: "space-between" }}>
+            <span style={{
+              fontSize: 12,
+              color: (() => {
+                if (phone.length === 0) return "var(--muted-foreground)";
+                if (!phone.startsWith("05")) return "#c45c5c";
+
+                const hasMatchingPrefix = customers.some((c) => c.phone.startsWith(phone));
+                if (phone.length === 11) {
+                  return hasMatchingPrefix ? "#c45c5c" : "#2d7a2d";
+                }
+                return !hasMatchingPrefix ? "#2d7a2d" : "var(--muted-foreground)";
+              })()
+            }}>
+              {(() => {
+                if (phone.length === 0) return t.appointmentForm.phoneNumberRules;
+                if (!phone.startsWith("05")) return t.appointmentForm.errors.phoneMustStart;
+
+                const hasMatchingPrefix = customers.some((c) => c.phone.startsWith(phone));
+                if (phone.length === 11) {
+                  return hasMatchingPrefix
+                    ? (t.common.phoneExists ?? "Phone number is already registered")
+                    : t.appointmentForm.validNumber;
+                }
+                return !hasMatchingPrefix
+                  ? ((t.appointmentForm as any).availableNumber ?? "✓ Phone number is available")
+                  : t.appointmentForm.phoneNumberRules;
+              })()}
+            </span>
+            <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>
+              {phone.length}/11
+            </span>
+          </div>
+        </div>
+
+        {error && (
+          <div
+            style={{
+              padding: "10px 12px",
+              background: "#fde8e8",
+              border: "1px solid #f4b5b5",
+              borderRadius: 6,
+              fontSize: 12,
+              color: "#a01a1a",
+              marginBottom: 16,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: "8px 16px",
+              background: "var(--muted)",
+              border: "1px solid var(--border)",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontSize: 13,
+              color: "var(--foreground)",
+            }}
+          >
+            {t.common.cancel ?? "Cancel"}
+          </button>
+          <button
+            onClick={handleCreate}
+            disabled={saving || !name.trim() || !!phoneError || phone.length !== 11}
+            style={{
+              padding: "8px 16px",
+              background: (saving || !name.trim() || !!phoneError || phone.length !== 11) ? "var(--muted)" : "var(--primary)",
+              color: (saving || !name.trim() || !!phoneError || phone.length !== 11) ? "var(--muted-foreground)" : "white",
+              border: "none",
+              borderRadius: 6,
+              cursor: (saving || !name.trim() || !!phoneError || phone.length !== 11) ? "default" : "pointer",
+              fontSize: 13,
+              fontWeight: 500,
+            }}
+          >
+            {saving ? (t.common.creating ?? "Creating...") : (t.common.create ?? "Create")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function CustomersClient({ customers: initialCustomers }: { customers: Customer[] }) {
   const { t } = useLang();
   const [query, setQuery] = useState("");
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [customers, setCustomers] = useState(initialCustomers);
 
   const filtered = query.trim()
     ? customers.filter(
@@ -37,6 +316,24 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
             {customers.length} {customers.length === 1 ? t.customers.subtitle1 : t.customers.subtitle2}
           </p>
         </div>
+        <button
+          onClick={() => setShowCreateDialog(true)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "8px 16px",
+            background: "var(--primary)",
+            color: "white",
+            border: "none",
+            borderRadius: 8,
+            cursor: "pointer",
+            fontSize: 13,
+            fontWeight: 500,
+          }}
+        >
+          <Plus size={16} /> {t.customers.newCustomer ?? "New Customer"}
+        </button>
       </div>
 
       {/* Search Bar */}
@@ -98,7 +395,9 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
       {/* Results count when searching */}
       {query.trim() && (
         <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12 }}>
-          {filtered.length} result{filtered.length !== 1 ? "s" : ""} for &ldquo;{query.trim()}&rdquo;
+          {filtered.length === 1
+            ? t.customers.searchResultOne.replace("{query}", query.trim())
+            : t.customers.searchResults.replace("{count}", String(filtered.length)).replace("{query}", query.trim())}
         </p>
       )}
 
@@ -190,6 +489,18 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
             );
           })}
         </div>
+      )}
+
+      {/* Create Customer Dialog */}
+      {showCreateDialog && (
+        <CreateCustomerDialog
+          onClose={() => setShowCreateDialog(false)}
+          onSaved={(newCustomer) => {
+            setCustomers([...customers, newCustomer].sort((a, b) => a.name.localeCompare(b.name)));
+            setShowCreateDialog(false);
+          }}
+          customers={customers}
+        />
       )}
     </div>
   );

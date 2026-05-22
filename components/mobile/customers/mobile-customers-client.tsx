@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { Search, Phone, CalendarDays, Package } from "lucide-react";
+import { useLang } from "@/components/providers/language-provider";
+import { localizePackageName } from "@/lib/package-utils";
 
 type Customer = {
   id: string;
@@ -18,6 +20,7 @@ interface Props {
 
 export function MobileCustomersClient({ customers }: Props) {
   const [search, setSearch] = useState("");
+  const { t } = useLang();
 
   const filtered = useMemo(
     () =>
@@ -39,7 +42,7 @@ export function MobileCustomersClient({ customers }: Props) {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search customers…"
+            placeholder={t.customers.searchPlaceholder}
             className="w-full pl-9 pr-4 py-2 text-sm bg-zinc-50 border border-zinc-200 rounded-lg outline-none focus:ring-2 focus:ring-rose-300"
           />
         </div>
@@ -49,7 +52,7 @@ export function MobileCustomersClient({ customers }: Props) {
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
         {filtered.length === 0 && (
           <div className="text-center text-zinc-400 text-sm py-12">
-            No customers found
+            {t.customers.noResults}
           </div>
         )}
         {filtered.map((c) => {
@@ -75,12 +78,12 @@ export function MobileCustomersClient({ customers }: Props) {
                 <div className="flex flex-col items-end gap-1 text-xs text-zinc-400">
                   <span className="flex items-center gap-1">
                     <CalendarDays className="w-3.5 h-3.5" />
-                    {c._count.appointments} appts
+                    {c._count.appointments} {t.staff.appointments}
                   </span>
                   {activePackages.length > 0 && (
                     <span className="flex items-center gap-1 text-rose-500 font-medium">
                       <Package className="w-3.5 h-3.5" />
-                      {activePackages.reduce((s, p) => s + p.remainingSessions, 0)} sessions left
+                      {activePackages.reduce((s, p) => s + p.remainingSessions, 0)} {t.customers.sessionsLeft}
                     </span>
                   )}
                 </div>
@@ -92,7 +95,7 @@ export function MobileCustomersClient({ customers }: Props) {
                       key={i}
                       className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px] font-medium"
                     >
-                      {p.name} · {p.remainingSessions}/{p.totalSessions}
+                      {localizePackageName(p.name, t)} · {p.remainingSessions}/{p.totalSessions}
                     </span>
                   ))}
                 </div>

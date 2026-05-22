@@ -57,7 +57,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) { setError("Name is required"); return; }
+    if (!name.trim()) { setError(t.apiErrors.nameRequired); return; }
 
     setLoadingId("form");
     setError("");
@@ -69,7 +69,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: name.trim(), role }),
         });
-        if (!res.ok) throw new Error("Failed to update");
+        if (!res.ok) throw new Error(t.apiErrors.updateFailed);
         const updated = await res.json();
         setStaff((prev) =>
           prev.map((s) => (s.id === editId ? { ...s, ...updated } : s))
@@ -80,7 +80,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: name.trim(), role }),
         });
-        if (!res.ok) throw new Error("Failed to create");
+        if (!res.ok) throw new Error(t.apiErrors.createFailed);
         const created = await res.json();
         setStaff((prev) =>
           [...prev, { ...created, appointmentCount: 0, totalRevenue: 0 }].sort((a, b) =>
@@ -90,18 +90,21 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
       }
       closeForm();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : t.common.error);
     } finally {
       setLoadingId(null);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this staff member? This will fail if they have appointments.")) return;
+    if (!confirm(t.staff.deleteConfirm)) return;
     setLoadingId(id);
     try {
       const res = await fetch(`/api/staff/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Cannot delete — staff member has appointments");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || t.apiErrors.deleteFailed);
+      }
       setStaff((prev) => prev.filter((s) => s.id !== id));
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to delete");
@@ -197,7 +200,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
                   <div>
                     <div style={{ fontWeight: 500, fontSize: 14 }}>{member.name}</div>
                     {topStaff?.id === member.id && member.appointmentCount > 0 && (
-                      <div style={{ fontSize: 10, color: "#c9956b", fontWeight: 500 }}>⭐ Top performer</div>
+                      <div style={{ fontSize: 10, color: "#c9956b", fontWeight: 500 }}>{t.staff.topPerformer}</div>
                     )}
                   </div>
                 </div>
@@ -256,7 +259,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="örn. Lamees Bahaa"
+                    placeholder={t.staff.namePlaceholder}
                     required
                     style={inputStyle}
                     autoFocus
@@ -280,7 +283,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
                     {t.staff.cancel}
                   </button>
                   <button type="submit" disabled={loadingId === "form"} style={{ ...btnStyle, flex: 2, background: "var(--primary)", color: "white", opacity: loadingId === "form" ? 0.7 : 1 }}>
-                    {loadingId === "form" ? "Saving..." : editId ? "Save Changes" : t.staff.addMember}
+                    {loadingId === "form" ? t.staff.saving : editId ? t.staff.save : t.staff.addMember}
                   </button>
                 </div>
               </div>

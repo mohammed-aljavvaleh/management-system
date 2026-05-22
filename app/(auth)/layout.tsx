@@ -1,15 +1,13 @@
 import "../globals.css";
 import type { Metadata } from "next";
-import { QueryProvider } from "@/components/providers/query-provider";
 import { LanguageProvider } from "@/components/providers/language-provider";
-import { MobileShell } from "@/components/mobile/mobile-shell";
 
 export const metadata: Metadata = {
   title: "Güzellik Salonu",
   description: "Güzellik Salonu Yönetim Sistemi",
 };
 
-export default function MobileLayout({
+export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -17,11 +15,7 @@ export default function MobileLayout({
   return (
     <html lang="en" className="h-full">
       <body className="h-full">
-        <LanguageProvider>
-          <QueryProvider>
-            <MobileShell>{children}</MobileShell>
-          </QueryProvider>
-        </LanguageProvider>
+        <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>
   );
