@@ -12,7 +12,26 @@ type StaffMember = {
   totalRevenue: number;
 };
 
-const ROLES = ["Technician", "Senior Technician", "Nail Artist", "Manager", "Receptionist"];
+const ROLES = [
+  "Owner",
+  "Manager",
+  "Receptionist",
+  "Hairdresser",
+  "Hair Stylist",
+  "Colorist",
+  "Nail Artist",
+  "Nail Technician",
+  "Manicurist",
+  "Aesthetician",
+  "Laser Technician",
+  "Makeup Artist",
+  "Brow & Lash Artist",
+  "Masseuse",
+  "Masseur",
+  "Technician",
+  "Senior Technician",
+  "Junior Technician"
+];
 
 const AVATAR_COLORS = [
   { bg: "#f5ede5", color: "#c9956b" },
@@ -206,7 +225,9 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
                 </div>
 
                 {/* Role */}
-                <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{member.role}</div>
+                <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+                  {(t.staff.roles as any)[member.role] || member.role}
+                </div>
 
                 {/* Appointments with mini bar */}
                 <div>
@@ -268,7 +289,11 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
                 <div>
                   <label style={labelStyle}>{t.staff.role}</label>
                   <select value={role} onChange={(e) => setRole(e.target.value)} style={inputStyle}>
-                    {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                    {ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {(t.staff.roles as any)[r] || r}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

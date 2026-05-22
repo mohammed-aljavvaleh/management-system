@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -15,6 +16,25 @@ import { useLang } from "@/components/providers/language-provider";
 export function MobileShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { t } = useLang();
+  const [salonName, setSalonName] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!mounted) return;
+        if (data?.salonName) setSalonName(data.salonName);
+      })
+      .catch(() => {
+        // ignore
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const tabs = [
     { href: "/mobile/appointments", label: t.nav.appointments, icon: CalendarDays },
@@ -29,7 +49,7 @@ export function MobileShell({ children }: { children: React.ReactNode }) {
       {/* Top header */}
       <header className="flex-none bg-white border-b border-zinc-200 px-4 py-3 flex items-center justify-between">
         <h1 className="text-base font-semibold text-zinc-900 tracking-tight">
-          Lamees Nail Salon
+          {salonName ?? "\u00A0"}
         </h1>
         <span className="text-xs text-zinc-400 font-medium">{t.nav.staff}</span>
       </header>

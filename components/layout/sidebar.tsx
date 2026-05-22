@@ -10,7 +10,6 @@ import {
   Users,
   IdCardLanyard,
   BarChart2,
-  Sparkles,
   X,
   LogOut
 } from "lucide-react";
@@ -26,6 +25,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const path = usePathname();
   const { t } = useLang();
   const [adminName, setAdminName] = useState<string | null>(null);
+  const [salonName, setSalonName] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -33,8 +33,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     fetch("/api/auth/me")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!mounted || !data?.username) return;
-        setAdminName(capitalize(data.username));
+        if (!mounted) return;
+        if (data?.username) setAdminName(capitalize(data.username));
+        if (data?.salonName) setSalonName(data.salonName);
       })
       .catch(() => {
         // ignore failures
@@ -110,29 +111,25 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </button>
 
         {/* Logo */}
-        <div style={{ padding: "28px 20px 24px", borderBottom: "1px solid var(--border)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: "50%",
-              background: "linear-gradient(135deg, var(--primary), var(--accent))",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <Sparkles size={15} color="white" />
-            </div>
-            <div>
-              <div style={{
-                fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 600,
-                color: "var(--foreground)", lineHeight: 1.1,
-              }}>
-                {adminName ?? "Admin"}
-              </div>
-              <div style={{
-                fontSize: 10, color: "var(--muted-foreground)",
-                letterSpacing: "0.08em", textTransform: "uppercase",
-              }}>
-                {t.nav.sidebarSubtitle}
-              </div>
-            </div>
+        <div style={{ padding: "24px 20px 20px", borderBottom: "1px solid var(--border)" }}>
+          <div style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 22,
+            fontWeight: 500,
+            color: "var(--foreground)",
+            letterSpacing: "0.02em",
+            lineHeight: 1.2
+          }}>
+            {salonName ?? "\u00A0"}
+          </div>
+          <div style={{
+            fontSize: 10,
+            color: "var(--muted-foreground)",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            marginTop: 2
+          }}>
+            {t.nav.sidebarSubtitle}
           </div>
         </div>
 
@@ -181,11 +178,37 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             {t.nav.signOut}
           </button>
 
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 13, color: "var(--foreground)" }}>
-              {t.nav.adminPanel}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+            <div style={{
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              background: "var(--primary-light)",
+              color: "var(--primary)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 12,
+              fontWeight: 600,
+              flexShrink: 0
+            }}>
+              {adminName ? adminName.charAt(0).toUpperCase() : "A"}
             </div>
-            <div>v1.0.0</div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{
+                fontSize: 12.5,
+                fontWeight: 500,
+                color: "var(--foreground)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis"
+              }}>
+                {adminName ?? "Admin"}
+              </div>
+              <div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>
+                {t.nav.adminPanel}
+              </div>
+            </div>
           </div>
         </div>
       </aside>

@@ -198,15 +198,109 @@ textarea,
   }
 
   .admin-calendar-grid {
-    min-width: 520px !important;
+    min-width: unset !important;
   }
 
   .admin-calendar-scroll {
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden !important;
   }
 
   .admin-day-panel {
     max-height: none !important;
   }
 }
+
+/* Reports Page Styles */
+.reports-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 22px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.01);
+}
+
+.reports-legend {
+  display: flex;
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.reports-legend-items {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.reports-range-container {
+  display: flex;
+  background: var(--muted);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  gap: 2px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.reports-range-btn {
+  flex: 1;
+  padding: 6px 4px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted-foreground);
+  transition: all 0.1s ease;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.reports-range-btn.active {
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.admin-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.2; }
+  50% { transform: scale(1.6); opacity: 0.4; }
+  100% { transform: scale(1); opacity: 0.2; }
+}
+
+@media (max-width: 767px) {
+  .reports-card {
+    padding: 16px 14px !important;
+  }
+  .reports-legend {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  .reports-legend-items {
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+  .reports-range-btn {
+    font-size: 10px !important;
+    padding: 6px 2px !important;
+  }
+  .admin-two-col {
+    grid-template-columns: 1fr !important;
+  }
+}
+
