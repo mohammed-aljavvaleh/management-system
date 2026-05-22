@@ -17,8 +17,10 @@ export const sessionOptions: SessionOptions = {
   password: sessionSecret,
   cookieName: "lamees_session",
   cookieOptions: {
-    secure: process.env.SESSION_COOKIE_SECURE === "true" || (
-      process.env.NODE_ENV === "production" && process.env.NEXT_PUBLIC_SITE_URL?.startsWith("https://")
+    secure: process.env.SESSION_COOKIE_SECURE !== "false" && (
+      process.env.SESSION_COOKIE_SECURE === "true" || (
+        process.env.NODE_ENV === "production" && process.env.NEXT_PUBLIC_SITE_URL?.startsWith("https://")
+      )
     ),
     httpOnly: true,
     sameSite: "lax",

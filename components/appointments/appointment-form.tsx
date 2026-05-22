@@ -583,7 +583,7 @@ export function AppointmentForm({ services, staff }: Props) {
                     >
                       {s.name}
                       <span style={{ fontSize: 11, color: "var(--muted-foreground)", marginLeft: 6 }}>
-                        {s.role}
+                        {(t.staff.roles as any)[s.role] || s.role}
                       </span>
                     </button>
                   ))}

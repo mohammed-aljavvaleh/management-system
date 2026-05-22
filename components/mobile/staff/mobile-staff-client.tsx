@@ -30,7 +30,7 @@ export function MobileStaffClient({ staff }: { staff: Staff[] }) {
             </div>
             <div>
               <p className="font-semibold text-sm text-zinc-900">{s.name}</p>
-              <p className="text-xs text-zinc-400">{s.role}</p>
+              <p className="text-xs text-zinc-400">{(t.staff.roles as any)[s.role] || s.role}</p>
             </div>
           </div>
           <span className="flex items-center gap-1 text-xs text-zinc-500">

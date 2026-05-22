@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
-import { Menu, X, Sparkles } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 export function ShellClient({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [adminName, setAdminName] = useState<string | null>(null);
+  const [salonName, setSalonName] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -14,8 +15,9 @@ export function ShellClient({ children }: { children: React.ReactNode }) {
     fetch("/api/auth/me")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!mounted || !data?.username) return;
-        setAdminName(capitalize(data.username));
+        if (!mounted) return;
+        if (data?.username) setAdminName(capitalize(data.username));
+        if (data?.salonName) setSalonName(data.salonName);
       })
       .catch(() => {
         // ignore
@@ -63,16 +65,9 @@ export function ShellClient({ children }: { children: React.ReactNode }) {
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, height: "100%" }}>
           {/* Mobile topbar */}
           <header className="mobile-topbar">
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{
-                width: 28, height: 28, borderRadius: "50%",
-                background: "linear-gradient(135deg, var(--primary), var(--accent))",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <Sparkles size={13} color="white" />
-              </div>
-              <span style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 600 }}>
-                {adminName ?? "Lamees"}
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <span style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 500, letterSpacing: "0.02em" }}>
+                {salonName ?? "\u00A0"}
               </span>
             </div>
 
