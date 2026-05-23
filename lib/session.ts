@@ -15,7 +15,7 @@ if (!sessionSecret || sessionSecret.length < 32) {
 
 export const sessionOptions: SessionOptions = {
   password: sessionSecret,
-  cookieName: "lamees_session",
+  cookieName: "management_session",
   cookieOptions: {
     secure: process.env.SESSION_COOKIE_SECURE !== "false" && (
       process.env.SESSION_COOKIE_SECURE === "true" || (

@@ -28,7 +28,7 @@ A modern admin panel for managing nail salon appointments, customers, services, 
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd lamees-nail-salon-admin
+   cd management-system
    ```
 
 2. **Install dependencies**

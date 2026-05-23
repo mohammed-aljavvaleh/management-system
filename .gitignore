@@ -42,3 +42,14 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# Database backups and dumps
+backup.sql
+
+# Neon CLI configuration
+.neon
+
+# AI agent workspace and locks
+.agents/
+.claude/
+skills-lock.json

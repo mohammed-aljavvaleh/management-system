@@ -481,7 +481,7 @@ export function ReportsClient({
       label: t.reports.AvgTicket,
       value: `₺${avgRevenue.toFixed(0)}`,
       sub: `${lang === "tr" ? "Önceki" : "Previous"}: ₺${prevAvgRevenue.toFixed(0)}`,
-      icon: TrendingUp,
+      icon: TurkishLira,
       color: "#9ec97b",
       trend: renderTrend(avgRevenue, prevAvgRevenue),
     },
