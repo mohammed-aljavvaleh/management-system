@@ -30,7 +30,7 @@ export async function proxy(req: NextRequest) {
     return addSecurityHeaders(res);
   }
 
-  const hasCookie = req.cookies.has("lamees_session");
+  const hasCookie = req.cookies.has("management_session");
 
   if (!hasCookie && !isLoginPage) {
     log(req, "REDIRECT /login", Date.now() - start);
