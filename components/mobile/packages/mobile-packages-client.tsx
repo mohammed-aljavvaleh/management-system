@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { Search, User, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLang } from "@/components/providers/language-provider";
+import { Price, useLang } from "@/components/providers/language-provider";
 import { localizePackageName } from "@/lib/package-utils";
 
 type UserPackage = {
@@ -128,11 +128,12 @@ export function MobilePackagesClient({ packages }: { packages: UserPackage[] }) 
               <div className="mt-2 pt-2 border-t border-zinc-50 flex items-center justify-between text-xs">
                 <span className="flex items-center gap-1 text-zinc-500">
                   <Banknote className="w-3.5 h-3.5" />
-                  {t.packages.paid} {p.paidAmount} / {p.totalPrice} {t.common.currency}
+                  {t.packages.paid} <Price amount={p.paidAmount} size={12} /> / <Price amount={p.totalPrice} size={12} />
                 </span>
                 {balance > 0 && (
-                  <span className="text-red-500 font-semibold">
-                    -{balance} {t.common.currency}
+                  <span className="inline-flex items-center gap-0.5 text-red-500 font-semibold">
+                    <span>-</span>
+                    <Price amount={balance} size={12} />
                   </span>
                 )}
                 {balance <= 0 && (

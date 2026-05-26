@@ -2,8 +2,8 @@
 
 import { useTransition, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { TrendingUp, CalendarDays, CheckCircle, BarChart2, TurkishLira, Target } from "lucide-react";
-import { useLang } from "@/components/providers/language-provider";
+import { TrendingUp, CalendarDays, CheckCircle, BarChart2, TurkishLira, Target, SaudiRiyal } from "lucide-react";
+import { useLang, CurrencySymbol, Price } from "@/components/providers/language-provider";
 import { Chart, registerables } from "chart.js";
 
 Chart.register(...registerables);
@@ -54,17 +54,21 @@ function RevenueChart({ data, t, lang }: RevenueChartProps) {
     const isDark = document.documentElement.classList.contains("dark");
     const gridColor = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)";
     const textColor = isDark ? "#a3a3a3" : "#737373";
+    const numberLocale = lang === "ar" ? "ar-SA" : lang === "tr" ? "tr-TR" : "en-US";
 
     const labels = data.map((d) => {
       const date = new Date(d.date + "T12:00:00");
       const day = date.getDate();
       const monthIdx = date.getMonth();
-      if (lang === "tr") {
-        const trMonths = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
-        return `${day} ${trMonths[monthIdx]}`;
+      const monthKeys = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"] as const;
+      const fullMonth: string = (t.months as Record<string, string>)[monthKeys[monthIdx]];
+      const monthAbbr = fullMonth.slice(0, 3);
+      if (lang === "ar") {
+        return `${day} ${monthAbbr}`;
+      } else if (lang === "tr") {
+        return `${day} ${monthAbbr}`;
       } else {
-        const enMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        return `${enMonths[monthIdx]} ${day}`;
+        return `${monthAbbr} ${day}`;
       }
     });
 
@@ -120,7 +124,10 @@ function RevenueChart({ data, t, lang }: RevenueChartProps) {
                 let label = context.dataset.label || "";
                 if (label) label += ": ";
                 if (context.parsed.y !== null) {
-                  label += new Intl.NumberFormat(lang === "tr" ? "tr-TR" : "en-US", { style: "currency", currency: "TRY" }).format(context.parsed.y);
+                  label += Number(context.parsed.y).toLocaleString(numberLocale, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  });
                 }
                 return label;
               },
@@ -140,7 +147,9 @@ function RevenueChart({ data, t, lang }: RevenueChartProps) {
             ticks: {
               color: textColor,
               font: { size: 10, family: "Inter, sans-serif" },
-              callback: (value) => "₺" + value.toLocaleString(lang === "tr" ? "tr-TR" : "en-US"),
+              callback: (value) => {
+                return Number(value).toLocaleString(numberLocale);
+              },
             },
           },
         },
@@ -158,7 +167,7 @@ function RevenueChart({ data, t, lang }: RevenueChartProps) {
     <div className="reports-card" style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 280 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <h2 style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 600, color: "var(--foreground)", display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ color: "#d4884a" }}>●</span> {t.reports.dailyRevenue}
+          <CurrencySymbol size={13} style={{ color: "#d4884a" }} /> {t.reports.dailyRevenue}
         </h2>
       </div>
       <div style={{ flex: 1, position: "relative", minHeight: 200 }}>
@@ -192,12 +201,15 @@ function ReservationsChart({ data, t, lang }: ReservationsChartProps) {
       const date = new Date(d.date + "T12:00:00");
       const day = date.getDate();
       const monthIdx = date.getMonth();
-      if (lang === "tr") {
-        const trMonths = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
-        return `${day} ${trMonths[monthIdx]}`;
+      const monthKeys = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"] as const;
+      const fullMonth = t.months[monthKeys[monthIdx]];
+      const monthAbbr = fullMonth.slice(0, 3);
+      if (lang === "ar") {
+        return `${day} ${monthAbbr}`;
+      } else if (lang === "tr") {
+        return `${day} ${monthAbbr}`;
       } else {
-        const enMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        return `${enMonths[monthIdx]} ${day}`;
+        return `${monthAbbr} ${day}`;
       }
     });
 
@@ -312,7 +324,7 @@ export function ReportsClient({
   currentMonthRevenue,
   heatmapData,
 }: Props) {
-  const { t, lang } = useLang();
+  const { t, lang, currency } = useLang();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -463,9 +475,13 @@ export function ReportsClient({
   const stats = [
     {
       label: t.reports.totalRevenue,
-      value: `₺${totalRevenue.toFixed(0)}`,
-      sub: `${lang === "tr" ? "Önceki" : "Previous"}: ₺${prevRevenue.toFixed(0)}`,
-      icon: TurkishLira,
+      value: <Price amount={totalRevenue} showDecimals={false} size={20} style={{ fontWeight: 600 }} />,
+      sub: (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+          {t.reports.previous}: <Price amount={prevRevenue} showDecimals={false} size={11} />
+        </span>
+      ),
+      icon: currency === "TRY" ? TurkishLira : SaudiRiyal,
       color: "#d4884a",
       trend: renderTrend(totalRevenue, prevRevenue),
     },
@@ -479,9 +495,13 @@ export function ReportsClient({
     },
     {
       label: t.reports.AvgTicket,
-      value: `₺${avgRevenue.toFixed(0)}`,
-      sub: `${lang === "tr" ? "Önceki" : "Previous"}: ₺${prevAvgRevenue.toFixed(0)}`,
-      icon: TurkishLira,
+      value: <Price amount={avgRevenue} showDecimals={false} size={20} style={{ fontWeight: 600 }} />,
+      sub: (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+          {t.reports.previous}: <Price amount={prevAvgRevenue} showDecimals={false} size={11} />
+        </span>
+      ),
+      icon: currency === "TRY" ? TurkishLira : SaudiRiyal,
       color: "#9ec97b",
       trend: renderTrend(avgRevenue, prevAvgRevenue),
     },
@@ -498,9 +518,15 @@ export function ReportsClient({
   const goalProgress = monthlyGoal > 0 ? Math.round((currentMonthRevenue / monthlyGoal) * 100) : 0;
 
   // Heatmap Labels and Matrix helpers
-  const daysOfWeek = lang === "tr" 
-    ? ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"] 
-    : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const daysOfWeek = [
+    t.heatmapDays.sunday,
+    t.heatmapDays.monday,
+    t.heatmapDays.tuesday,
+    t.heatmapDays.wednesday,
+    t.heatmapDays.thursday,
+    t.heatmapDays.friday,
+    t.heatmapDays.saturday,
+  ];
 
   const hourLabels = ["09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"];
   const maxDensity = Math.max(...heatmapData.flat(), 1);
@@ -520,7 +546,7 @@ export function ReportsClient({
         </div>
 
         {/* Range Selection Pills */}
-        <div 
+        <div
           className="reports-range-container"
           style={{
             display: "flex",
@@ -639,12 +665,12 @@ export function ReportsClient({
       )}
 
       {/* Metric Cards Row */}
-      <div 
-        style={{ 
-          display: "grid", 
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", 
-          gap: 14, 
-          marginBottom: 24 
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: 14,
+          marginBottom: 24
         }}
       >
         {stats.map((stat) => (
@@ -701,10 +727,12 @@ export function ReportsClient({
               {goalProgress}%
             </div>
           </div>
-          
+
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
-              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{t.reports.goal}: ₺</span>
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)", display: "inline-flex", alignItems: "center", gap: 2 }}>
+                {t.reports.goal}: <CurrencySymbol size={11} />
+              </span>
               <input
                 type="number"
                 value={mounted ? (monthlyGoal === 0 ? "" : monthlyGoal) : 5000}
@@ -722,32 +750,32 @@ export function ReportsClient({
                 }}
               />
             </div>
-            
+
             <div style={{ width: "100%", height: 4, background: "var(--muted)", borderRadius: 2, marginTop: 8, overflow: "hidden" }}>
-              <div 
-                style={{ 
-                  height: "100%", 
-                  width: `${Math.min(goalProgress, 100)}%`, 
-                  background: "#d4884a", 
-                  borderRadius: 2, 
-                  transition: "width 0.3s ease" 
-                }} 
+              <div
+                style={{
+                  height: "100%",
+                  width: `${Math.min(goalProgress, 100)}%`,
+                  background: "#d4884a",
+                  borderRadius: 2,
+                  transition: "width 0.3s ease"
+                }}
               />
             </div>
             <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 6 }}>
-              ₺{currentMonthRevenue.toFixed(0)} / ₺{monthlyGoal.toFixed(0)}
+              <Price amount={currentMonthRevenue} showDecimals={false} /> / <Price amount={monthlyGoal} showDecimals={false} />
             </div>
           </div>
         </div>
       </div>
 
       {/* Charts Section */}
-      <div 
-        style={{ 
-          display: "grid", 
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 480px), 1fr))", 
-          gap: 16, 
-          marginBottom: 16 
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 480px), 1fr))",
+          gap: 16,
+          marginBottom: 16
         }}
       >
         <RevenueChart data={dailyData} t={t} lang={lang} />
@@ -755,7 +783,7 @@ export function ReportsClient({
       </div>
 
       {/* Bottom Section - 3 Equal Columns */}
-      <div 
+      <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
@@ -765,7 +793,7 @@ export function ReportsClient({
       >
 
         {/* 1. Popular Services */}
-        <div 
+        <div
           style={{
             background: "var(--card)",
             border: "0.5px solid var(--border)",
@@ -800,7 +828,7 @@ export function ReportsClient({
                       </div>
                       <div style={{ display: "flex", gap: 14, flexShrink: 0 }}>
                         <span style={{ color: "var(--muted-foreground)" }}>{svc.count}x</span>
-                        <span style={{ color: "var(--primary)", fontWeight: 600 }}>₺{svc.revenue.toFixed(0)}</span>
+                        <span style={{ color: "var(--primary)", fontWeight: 600 }}><Price amount={svc.revenue} showDecimals={false} /></span>
                       </div>
                     </div>
                     <div style={{ height: 4, background: "var(--muted)", borderRadius: 2, overflow: "hidden" }}>
@@ -814,7 +842,7 @@ export function ReportsClient({
         </div>
 
         {/* 2. Staff Performance */}
-        <div 
+        <div
           style={{
             background: "var(--card)",
             border: "0.5px solid var(--border)",
@@ -849,7 +877,7 @@ export function ReportsClient({
                       <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                         <div style={{
                           width: 26, height: 26, borderRadius: "50%",
-                          background: "rgba(212, 136, 74, 0.1)", 
+                          background: "rgba(212, 136, 74, 0.1)",
                           color: "#d4884a",
                           display: "flex", alignItems: "center", justifyContent: "center",
                           fontSize: 12, fontWeight: 600,
@@ -862,10 +890,10 @@ export function ReportsClient({
                       </div>
                       <div style={{ display: "flex", gap: 10, fontSize: 13, alignItems: "center", flexShrink: 0 }}>
                         <span style={{ color: "var(--muted-foreground)" }}>{s.count} {t.staff.appointments}</span>
-                        <span style={{ color: "var(--primary)", fontWeight: 600 }}>₺{s.revenue.toFixed(0)}</span>
+                        <span style={{ color: "var(--primary)", fontWeight: 600 }}><Price amount={s.revenue} showDecimals={false} /></span>
                       </div>
                     </div>
-                    
+
                     <div style={{ height: 4, background: "var(--muted)", borderRadius: 2, overflow: "hidden", marginBottom: 6 }}>
                       <div style={{ height: "100%", width: `${pct}%`, background: "var(--primary)", borderRadius: 2 }} />
                     </div>
@@ -890,7 +918,7 @@ export function ReportsClient({
         </div>
 
         {/* 3. Heatmap Grid */}
-        <div 
+        <div
           style={{
             background: "var(--card)",
             border: "0.5px solid var(--border)",
@@ -929,16 +957,17 @@ export function ReportsClient({
                   {heatmapData[rIdx].map((val, cIdx) => {
                     const opacity = val > 0 ? 0.15 + (val / maxDensity) * 0.85 : 0;
                     const bg = val > 0 ? `rgba(212, 136, 74, ${opacity})` : "var(--muted)";
-                    
-                    const fullDayName = lang === "tr"
-                      ? ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"][rIdx]
-                      : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][rIdx];
-                    
-                    const appointmentsWord = lang === "tr" ? "randevu" : (val === 1 ? "booking" : "bookings");
+
+                    const fullDayKeys = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+                    const fullDayName = t.heatmapDaysFull[fullDayKeys[rIdx]];
+
+                    const appointmentsWord = val === 1 ? t.reports.booking : t.reports.bookings;
                     const timeLabel = `${hourLabels[cIdx]}:00`;
-                    const tooltipText = lang === "tr"
-                      ? `${fullDayName} saat ${timeLabel} — ${val} ${appointmentsWord}`
-                      : `${fullDayName} at ${timeLabel} — ${val} ${appointmentsWord}`;
+                    const tooltipText = lang === "ar"
+                      ? `${fullDayName} الساعة ${timeLabel} — ${val} ${appointmentsWord}`
+                      : lang === "tr"
+                        ? `${fullDayName} saat ${timeLabel} — ${val} ${appointmentsWord}`
+                        : `${fullDayName} at ${timeLabel} — ${val} ${appointmentsWord}`;
 
                     return (
                       <div

@@ -1,7 +1,7 @@
 "use client";
 
-import { Clock, Banknote } from "lucide-react";
-import { useLang } from "@/components/providers/language-provider";
+import { Clock } from "lucide-react";
+import { Price, useLang } from "@/components/providers/language-provider";
 
 type Service = { id: string; name: string; price: number; duration: number };
 
@@ -27,8 +27,7 @@ export function MobileServicesClient({ services }: { services: Service[] }) {
             </p>
           </div>
           <span className="flex items-center gap-1 text-sm font-semibold text-rose-600">
-            <Banknote className="w-4 h-4" />
-            {s.price} {t.common.currency}
+            <Price amount={s.price} />
           </span>
         </div>
       ))}

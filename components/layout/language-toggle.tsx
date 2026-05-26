@@ -7,15 +7,17 @@ export function LanguageToggle() {
 
   return (
     <div
+      dir="ltr"
       style={{
         display: "flex",
+        direction: "ltr",
         border: "1px solid var(--border)",
         borderRadius: 8,
         overflow: "hidden",
         width: "100%",
       }}
     >
-      {(["en", "tr"] as const).map((l) => (
+      {(["en", "tr", "ar"] as const).map((l) => (
         <button
           key={l}
           onClick={() => setLang(l)}
@@ -34,8 +36,10 @@ export function LanguageToggle() {
             gap: 5,
           }}
         >
-          <span style={{ fontSize: 14 }}>{l === "en" ? "🇬🇧" : "🇹🇷"}</span>
-          {l === "en" ? "EN" : "TR"}
+          <span style={{ fontSize: 14 }}>
+            {l === "en" ? "🇬🇧" : l === "tr" ? "🇹🇷" : "🇸🇦"}
+          </span>
+          {l === "en" ? "EN" : l === "tr" ? "TR" : "AR"}
         </button>
       ))}
     </div>

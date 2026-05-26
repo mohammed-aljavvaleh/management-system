@@ -1,6 +1,7 @@
 // scripts/seed-tenant.ts
-// Usage: npx tsx scripts/seed-tenant.ts
-// Seeds mock data scoped to a single salon ID safely.
+// Usage: npm run tenant:seed
+// Optional: SEED_ADMIN_USERNAME=noor npm run tenant:seed
+// Seeds rich Arabic demo data scoped to the salon owned by one admin.
 
 import "dotenv/config";
 import { PrismaClient } from "../app/generated/prisma";
@@ -8,195 +9,322 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
 const DATABASE_URL = process.env.DATABASE_URL;
-const targetSalonId = "cmp8ylsy10000xwjeokaaxhya"; // Scoped salonId
+const targetAdminUsername = (process.env.SEED_ADMIN_USERNAME || process.env.ADMIN_USERNAME || "noor").trim();
 
 if (!DATABASE_URL) {
   throw new Error("DATABASE_URL is missing. Add it to .env before running this script.");
+}
+if (!targetAdminUsername) {
+  throw new Error("SEED_ADMIN_USERNAME or ADMIN_USERNAME is required.");
 }
 
 const pool = new Pool({ connectionString: DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-async function main() {
-  console.log(`Starting database seed for salon: ${targetSalonId}...`);
+type ServiceKey =
+  | "classicManicure"
+  | "gelExtensions"
+  | "pedicureDeluxe"
+  | "laserFullBody"
+  | "nailArt"
+  | "facial"
+  | "browsLashes";
 
-  // Verify that the Salon exists
-  const salon = await prisma.salon.findUnique({
-    where: { id: targetSalonId },
-  });
-  if (!salon) {
-    throw new Error(`Salon with ID "${targetSalonId}" not found in database.`);
-  }
+type StaffKey = "owner" | "laser" | "nails" | "skin" | "reception";
 
-  console.log(`Found salon: "${salon.name}". Cleaning up existing tenant data...`);
+const serviceSeeds: Array<{ key: ServiceKey; name: string; price: number; duration: number }> = [
+  { key: "classicManicure", name: "مانيكير كلاسيكي", price: 120, duration: 35 },
+  { key: "gelExtensions", name: "تركيب جل", price: 260, duration: 95 },
+  { key: "pedicureDeluxe", name: "بديكير فاخر", price: 180, duration: 50 },
+  { key: "laserFullBody", name: "ليزر - كامل الجسم", price: 1200, duration: 120 },
+  { key: "nailArt", name: "رسم أظافر مخصص", price: 90, duration: 35 },
+  { key: "facial", name: "تنظيف بشرة عميق", price: 350, duration: 70 },
+  { key: "browsLashes", name: "حواجب ورموش", price: 220, duration: 55 },
+];
 
-  // 1. Clean existing data for this salon ONLY
+const staffSeeds: Array<{ key: StaffKey; name: string; role: string }> = [
+  { key: "owner", name: "نورا السالم", role: "مديرة الصالون" },
+  { key: "laser", name: "ريم الحربي", role: "أخصائية ليزر" },
+  { key: "nails", name: "لينا العتيبي", role: "خبيرة أظافر" },
+  { key: "skin", name: "هبة الأنصاري", role: "أخصائية بشرة" },
+  { key: "reception", name: "جود القحطاني", role: "استقبال ومتابعة" },
+];
+
+const customerSeeds = [
+  { name: "سارة القحطاني", phone: "05510000001", notes: "تفضل المواعيد الصباحية وتحب الهدوء." },
+  { name: "نورة الدوسري", phone: "05510000002", notes: "عميلة باقة شهرية، تفضل لينا." },
+  { name: "مها الشمري", phone: "05510000003", notes: "حساسية بسيطة من العطور القوية." },
+  { name: "هند الغامدي", phone: "05510000004", notes: "مهتمة بالعروض والباقات." },
+  { name: "لمى الحربي", phone: "05510000005", notes: "تحتاج تذكير قبل الموعد بيوم." },
+  { name: "ريم المطيري", phone: "05510000006", notes: "تفضل الدفع الإلكتروني." },
+  { name: "جود العنزي", phone: "05510000007", notes: "مواعيد بعد العصر فقط." },
+  { name: "أمل الزهراني", phone: "05510000008", notes: "زائرة جديدة من إنستغرام." },
+  { name: "عبير المالكي", phone: "05510000009", notes: "تطلب لون جل هادئ دائماً." },
+  { name: "دلال الشهري", phone: "05510000010", notes: "تراجع كل أسبوعين." },
+  { name: "خلود اليامي", phone: "05510000011", notes: "تفضل أخصائية البشرة هبة." },
+  { name: "بيان الحارثي", phone: "05510000012", notes: "تجربة أولى لخدمة الليزر." },
+];
+
+function appointmentDate(dayOffset: number, hour: number, minute = 0) {
+  const date = new Date();
+  date.setDate(date.getDate() + dayOffset);
+  date.setHours(hour, minute, 0, 0);
+  return date;
+}
+
+async function clearSalonData(salonId: string) {
   const packages = await prisma.userPackage.findMany({
-    where: { salonId: targetSalonId },
+    where: { salonId },
     select: { id: true },
   });
-  const packageIds = packages.map((p) => p.id);
+  const packageIds = packages.map((pkg) => pkg.id);
 
   if (packageIds.length > 0) {
     const deletedInstallments = await prisma.installment.deleteMany({
       where: { userPackageId: { in: packageIds } },
     });
-    console.log(`Deleted ${deletedInstallments.count} installments.`);
+    console.log(`Deleted installments: ${deletedInstallments.count}`);
   }
 
-  const deletedAppointments = await prisma.appointment.deleteMany({ where: { salonId: targetSalonId } });
-  console.log(`Deleted ${deletedAppointments.count} appointments.`);
+  const deletedAppointments = await prisma.appointment.deleteMany({ where: { salonId } });
+  const deletedPackages = await prisma.userPackage.deleteMany({ where: { salonId } });
+  const deletedCustomers = await prisma.customer.deleteMany({ where: { salonId } });
+  const deletedStaff = await prisma.staff.deleteMany({ where: { salonId } });
+  const deletedServices = await prisma.service.deleteMany({ where: { salonId } });
 
-  const deletedPackages = await prisma.userPackage.deleteMany({ where: { salonId: targetSalonId } });
-  console.log(`Deleted ${deletedPackages.count} packages.`);
+  console.log(`Deleted appointments: ${deletedAppointments.count}`);
+  console.log(`Deleted packages: ${deletedPackages.count}`);
+  console.log(`Deleted customers: ${deletedCustomers.count}`);
+  console.log(`Deleted staff: ${deletedStaff.count}`);
+  console.log(`Deleted services: ${deletedServices.count}`);
+}
 
-  const deletedCustomers = await prisma.customer.deleteMany({ where: { salonId: targetSalonId } });
-  console.log(`Deleted ${deletedCustomers.count} customers.`);
+async function main() {
+  const admin = await prisma.admin.findUnique({
+    where: { username: targetAdminUsername },
+    include: { salon: true },
+  });
 
-  const deletedStaff = await prisma.staff.deleteMany({ where: { salonId: targetSalonId } });
-  console.log(`Deleted ${deletedStaff.count} staff.`);
+  if (!admin) {
+    throw new Error(
+      `Admin "${targetAdminUsername}" was not found. Create it first with ADMIN_USERNAME="${targetAdminUsername}" npm run admin:create.`
+    );
+  }
 
-  const deletedServices = await prisma.service.deleteMany({ where: { salonId: targetSalonId } });
-  console.log(`Deleted ${deletedServices.count} services.`);
+  const salon = await prisma.salon.update({
+    where: { id: admin.salonId },
+    data: { name: "Noor Salon", currency: "SAR" },
+  });
 
-  // 2. Seed 5 Services
-  console.log("Seeding services...");
-  const services = await Promise.all([
-    prisma.service.create({ data: { name: "Classic Manicure", price: 60, duration: 30, salonId: targetSalonId } }),
-    prisma.service.create({ data: { name: "Gel Extensions", price: 120, duration: 90, salonId: targetSalonId } }),
-    prisma.service.create({ data: { name: "Pedicure Deluxe", price: 90, duration: 45, salonId: targetSalonId } }),
-    prisma.service.create({ data: { name: "Laser - Full Body", price: 1200, duration: 120, salonId: targetSalonId } }),
-    prisma.service.create({ data: { name: "Nail Art Custom", price: 40, duration: 30, salonId: targetSalonId } }),
-  ]);
+  console.log(`Seeding Arabic demo data for ${salon.name} (${salon.id}) as admin "${admin.username}"...`);
+  await clearSalonData(salon.id);
 
-  // 3. Seed 4 Staff Members
-  console.log("Seeding staff...");
-  const staff = await Promise.all([
-    prisma.staff.create({ data: { name: "Lamees Bahaa", role: "Owner", salonId: targetSalonId } }),
-    prisma.staff.create({ data: { name: "Sara Ahmed", role: "Senior Technician", salonId: targetSalonId } }),
-    prisma.staff.create({ data: { name: "Nour Hassan", role: "Technician", salonId: targetSalonId } }),
-    prisma.staff.create({ data: { name: "Zeynep Kaya", role: "Junior Technician", salonId: targetSalonId } }),
-  ]);
+  const services = Object.fromEntries(
+    await Promise.all(
+      serviceSeeds.map(async (service) => {
+        const created = await prisma.service.create({
+          data: {
+            name: service.name,
+            price: service.price,
+            duration: service.duration,
+            salonId: salon.id,
+          },
+        });
+        return [service.key, created] as const;
+      })
+    )
+  ) as Record<ServiceKey, Awaited<ReturnType<typeof prisma.service.create>>>;
 
-  // 4. Seed 15 Customers (Turkish phone format 05XXXXXXXXX)
-  console.log("Seeding customers...");
-  const customerNames = [
-    "Aisha Malik", "Fatma Demir", "Emel Can", "Leyla Yıldız", "Meryem Aksoy",
-    "Selma Öztürk", "Hülya Arslan", "Gül Şahin", "Derya Aydın", "Buse Koç",
-    "Arzu Kurt", "Sibel Özdemir", "Nalan Yılmaz", "Pelin Polat", "Selin Kılıç"
-  ];
+  const staff = Object.fromEntries(
+    await Promise.all(
+      staffSeeds.map(async (member) => {
+        const created = await prisma.staff.create({
+          data: {
+            name: member.name,
+            role: member.role,
+            salonId: salon.id,
+          },
+        });
+        return [member.key, created] as const;
+      })
+    )
+  ) as Record<StaffKey, Awaited<ReturnType<typeof prisma.staff.create>>>;
 
   const customers = await Promise.all(
-    customerNames.map((name, i) =>
+    customerSeeds.map((customer) =>
       prisma.customer.create({
-        data: { name, phone: `05${(555000000 + i).toString()}`, salonId: targetSalonId }
+        data: {
+          ...customer,
+          salonId: salon.id,
+        },
       })
     )
   );
 
-  // 5. Create Packages for some customers
-  console.log("Seeding packages...");
-  const laserService = services.find(s => s.name === "Laser - Full Body")!;
-  const activePackages = await Promise.all([
-    prisma.userPackage.create({
-      data: {
-        name: "Laser Package 6 Sessions",
-        totalSessions: 6,
-        remainingSessions: 4,
-        totalPrice: 4800,
-        paidAmount: 1600,
-        salonId: targetSalonId,
-        customerId: customers[0].id,
-        serviceId: laserService.id,
-      }
-    }),
-    prisma.userPackage.create({
-      data: {
-        name: "Monthly Manicure Club",
-        totalSessions: 4,
-        remainingSessions: 2,
-        totalPrice: 200,
-        paidAmount: 100,
-        salonId: targetSalonId,
-        customerId: customers[1].id,
-        serviceId: services[0].id,
-      }
-    })
-  ]);
-
-  // 6. Seed Installments for those packages
-  console.log("Seeding installments...");
-  await prisma.installment.createMany({
-    data: [
-      { amount: 800, note: "Down Payment", userPackageId: activePackages[0].id },
-      { amount: 800, note: "Installment 1", userPackageId: activePackages[0].id },
-      { amount: 100, note: "First Month", userPackageId: activePackages[1].id },
-    ]
+  const laserPackage = await prisma.userPackage.create({
+    data: {
+      name: "باقة ليزر كامل الجسم — 6 جلسات",
+      totalSessions: 6,
+      remainingSessions: 3,
+      totalPrice: 4800,
+      paidAmount: 2400,
+      salonId: salon.id,
+      customerId: customers[0].id,
+      serviceId: services.laserFullBody.id,
+    },
   });
 
-  // 7. Generate appointments spread out over the last 15 days and next 7 days
-  console.log("Generating appointments...");
-  const statuses = ["COMPLETED", "SCHEDULED", "CANCELLED"];
-  const appointmentsData = [];
-  const now = new Date();
+  const manicurePackage = await prisma.userPackage.create({
+    data: {
+      name: "نادي المانيكير الشهري — 4 جلسات",
+      totalSessions: 4,
+      remainingSessions: 1,
+      totalPrice: 640,
+      paidAmount: 480,
+      salonId: salon.id,
+      customerId: customers[1].id,
+      serviceId: services.classicManicure.id,
+    },
+  });
 
-  // Create 60 appointments to ensure rich dashboard visualization (charts, heatmap, trends)
-  for (let i = 0; i < 60; i++) {
-    const randomCustomer = customers[Math.floor(Math.random() * customers.length)];
-    const randomStaff = staff[Math.floor(Math.random() * staff.length)];
-    const randomService = services[Math.floor(Math.random() * services.length)];
-    
-    const date = new Date();
-    // Distribute randomly between -14 days and +7 days
-    const dayOffset = Math.floor(Math.random() * 22) - 14; 
-    date.setDate(now.getDate() + dayOffset);
-    
-    // Operating hours 09:00 - 20:00. Weekdays: Mon-Sat
-    const randomHour = 9 + Math.floor(Math.random() * 11);
-    date.setHours(randomHour, 0, 0, 0);
+  const browsPackage = await prisma.userPackage.create({
+    data: {
+      name: "باقة الحواجب والرموش — 3 جلسات",
+      totalSessions: 3,
+      remainingSessions: 0,
+      totalPrice: 660,
+      paidAmount: 660,
+      salonId: salon.id,
+      customerId: customers[2].id,
+      serviceId: services.browsLashes.id,
+    },
+  });
 
-    // Skip Sundays for realistic booking patterns
-    if (date.getDay() === 0) {
-      date.setDate(date.getDate() + 1); // shift to Monday
-    }
+  const facialPackage = await prisma.userPackage.create({
+    data: {
+      name: "باقة نضارة البشرة — 5 جلسات",
+      totalSessions: 5,
+      remainingSessions: 4,
+      totalPrice: 1500,
+      paidAmount: 350,
+      salonId: salon.id,
+      customerId: customers[10].id,
+      serviceId: services.facial.id,
+    },
+  });
 
-    let status = "COMPLETED";
-    if (date > now) {
-      status = "SCHEDULED";
-    } else {
-      // Past appointments: 80% completed, 20% cancelled
-      status = Math.random() > 0.2 ? "COMPLETED" : "CANCELLED";
-    }
+  await prisma.installment.createMany({
+    data: [
+      { userPackageId: laserPackage.id, amount: 800, note: "الدفعة المقدمة" },
+      { userPackageId: laserPackage.id, amount: 800, note: "القسط الأول" },
+      { userPackageId: laserPackage.id, amount: 800, note: "دفعة متابعة" },
+      { userPackageId: manicurePackage.id, amount: 160, note: "الدفعة المقدمة" },
+      { userPackageId: manicurePackage.id, amount: 160, note: "القسط الأول" },
+      { userPackageId: manicurePackage.id, amount: 160, note: "القسط الثاني" },
+      { userPackageId: browsPackage.id, amount: 660, note: "تم الدفع بالكامل" },
+      { userPackageId: facialPackage.id, amount: 350, note: "تم الدفع عند الحجز" },
+    ],
+  });
 
-    const usePackage = randomCustomer.id === customers[0].id && randomService.id === laserService.id;
+  const appointments: Array<{
+    customerIndex: number;
+    serviceKey: ServiceKey;
+    staffKey: StaffKey;
+    dayOffset: number;
+    hour: number;
+    minute?: number;
+    status: "COMPLETED" | "CANCELLED" | "SCHEDULED";
+    price?: number;
+    packageId?: string;
+    notes?: string;
+  }> = [
+    { customerIndex: 0, serviceKey: "laserFullBody", staffKey: "laser", dayOffset: -24, hour: 10, status: "COMPLETED", price: 800, packageId: laserPackage.id, notes: "جلسة أولى ضمن باقة الليزر." },
+    { customerIndex: 0, serviceKey: "laserFullBody", staffKey: "laser", dayOffset: -15, hour: 11, status: "COMPLETED", price: 800, packageId: laserPackage.id, notes: "استجابة ممتازة بعد الجلسة السابقة." },
+    { customerIndex: 0, serviceKey: "laserFullBody", staffKey: "laser", dayOffset: -6, hour: 12, status: "COMPLETED", price: 800, packageId: laserPackage.id, notes: "تأكيد موعد المتابعة بعد أربعة أسابيع." },
+    { customerIndex: 1, serviceKey: "classicManicure", staffKey: "nails", dayOffset: -20, hour: 13, status: "COMPLETED", price: 160, packageId: manicurePackage.id, notes: "لون وردي هادئ." },
+    { customerIndex: 1, serviceKey: "classicManicure", staffKey: "nails", dayOffset: -12, hour: 14, status: "COMPLETED", price: 160, packageId: manicurePackage.id, notes: "تم إصلاح ظفر مكسور." },
+    { customerIndex: 1, serviceKey: "classicManicure", staffKey: "nails", dayOffset: -4, hour: 15, status: "COMPLETED", price: 160, packageId: manicurePackage.id, notes: "اختارت لون بيج." },
+    { customerIndex: 2, serviceKey: "browsLashes", staffKey: "skin", dayOffset: -18, hour: 16, status: "COMPLETED", price: 220, packageId: browsPackage.id, notes: "تنظيف وترتيب خفيف." },
+    { customerIndex: 2, serviceKey: "browsLashes", staffKey: "skin", dayOffset: -10, hour: 17, status: "COMPLETED", price: 220, packageId: browsPackage.id, notes: "تثبيت رموش طبيعي." },
+    { customerIndex: 2, serviceKey: "browsLashes", staffKey: "skin", dayOffset: -2, hour: 18, status: "COMPLETED", price: 220, packageId: browsPackage.id, notes: "الباقة مكتملة." },
+    { customerIndex: 10, serviceKey: "facial", staffKey: "skin", dayOffset: -3, hour: 10, status: "COMPLETED", price: 350, packageId: facialPackage.id, notes: "جلسة تنظيف عميق أولى." },
+    { customerIndex: 0, serviceKey: "laserFullBody", staffKey: "laser", dayOffset: 8, hour: 11, status: "SCHEDULED", price: 0, packageId: laserPackage.id, notes: "جلسة قادمة ضمن الباقة." },
+    { customerIndex: 1, serviceKey: "classicManicure", staffKey: "nails", dayOffset: 5, hour: 16, status: "SCHEDULED", price: 0, packageId: manicurePackage.id, notes: "الجلسة الأخيرة، يلزم تسوية الرصيد." },
+    { customerIndex: 10, serviceKey: "facial", staffKey: "skin", dayOffset: 9, hour: 13, status: "SCHEDULED", price: 0, packageId: facialPackage.id, notes: "الجلسة الثانية من باقة البشرة." },
+    { customerIndex: 3, serviceKey: "gelExtensions", staffKey: "nails", dayOffset: -1, hour: 10, status: "COMPLETED", notes: "تصميم فرنسي ناعم." },
+    { customerIndex: 4, serviceKey: "pedicureDeluxe", staffKey: "nails", dayOffset: 0, hour: 9, status: "COMPLETED", notes: "موعد صباحي للعرض في لوحة التحكم." },
+    { customerIndex: 5, serviceKey: "facial", staffKey: "skin", dayOffset: 0, hour: 11, status: "SCHEDULED", notes: "تأكيد قبل الموعد بساعتين." },
+    { customerIndex: 6, serviceKey: "gelExtensions", staffKey: "nails", dayOffset: 0, hour: 14, status: "CANCELLED", notes: "اعتذرت العميلة بسبب ظرف طارئ." },
+    { customerIndex: 7, serviceKey: "laserFullBody", staffKey: "laser", dayOffset: 1, hour: 10, status: "SCHEDULED", notes: "استشارة أولى قبل الليزر." },
+    { customerIndex: 8, serviceKey: "nailArt", staffKey: "nails", dayOffset: 1, hour: 15, status: "SCHEDULED", notes: "تصميم للمناسبة." },
+    { customerIndex: 9, serviceKey: "classicManicure", staffKey: "nails", dayOffset: 2, hour: 17, status: "SCHEDULED", notes: "زيارة دورية." },
+    { customerIndex: 11, serviceKey: "laserFullBody", staffKey: "laser", dayOffset: 3, hour: 12, status: "SCHEDULED", notes: "تجربة أولى لخدمة الليزر." },
+  ];
 
-    appointmentsData.push({
-      startTime: date,
-      customerId: randomCustomer.id,
-      serviceId: randomService.id,
-      staffId: randomStaff.id,
-      salonId: targetSalonId,
-      priceAtBooking: usePackage ? 0 : randomService.price,
-      userPackageId: usePackage ? activePackages[0].id : null,
-      status: status,
+  const generatedOffsets = [-27, -26, -23, -21, -19, -17, -14, -13, -11, -9, -8, -7, -5, -4, -3, -2, -1];
+  generatedOffsets.forEach((offset, index) => {
+    const serviceKey = serviceSeeds[index % serviceSeeds.length].key;
+    const status = index % 5 === 0 ? "CANCELLED" : "COMPLETED";
+    appointments.push({
+      customerIndex: (index + 3) % customers.length,
+      serviceKey,
+      staffKey: index % 3 === 0 ? "nails" : index % 3 === 1 ? "skin" : "laser",
+      dayOffset: offset,
+      hour: 9 + (index % 9),
+      minute: index % 2 === 0 ? 0 : 30,
+      status,
+      notes: status === "CANCELLED" ? "تم الإلغاء بعد التواصل مع العميلة." : "زيارة مكتملة ضمن بيانات العرض.",
     });
-  }
+  });
 
-  await prisma.appointment.createMany({ data: appointmentsData });
+  const futureOffsets = [4, 5, 6, 7, 10, 11, 12, 13];
+  futureOffsets.forEach((offset, index) => {
+    const serviceKey = serviceSeeds[(index + 2) % serviceSeeds.length].key;
+    appointments.push({
+      customerIndex: (index + 4) % customers.length,
+      serviceKey,
+      staffKey: index % 2 === 0 ? "nails" : "skin",
+      dayOffset: offset,
+      hour: 10 + (index % 7),
+      minute: index % 2 === 0 ? 0 : 30,
+      status: "SCHEDULED",
+      notes: "موعد مخطط ضمن جدول الأسبوع القادم.",
+    });
+  });
 
-  console.log("Seeding successfully completed!");
-  console.log(`Scoping Results for Salon ID: "${targetSalonId}":`);
-  console.log(` - Services Created    : 5`);
-  console.log(` - Staff Members Created: 4`);
-  console.log(` - Customers Seeded     : 15`);
-  console.log(` - Packages Configured  : 2`);
-  console.log(` - Appointments Scrambled: 60`);
+  await prisma.appointment.createMany({
+    data: appointments.map((appointment) => {
+      const service = services[appointment.serviceKey];
+      const member = staff[appointment.staffKey];
+      return {
+        startTime: appointmentDate(appointment.dayOffset, appointment.hour, appointment.minute ?? 0),
+        customerId: customers[appointment.customerIndex].id,
+        serviceId: service.id,
+        staffId: member.id,
+        salonId: salon.id,
+        priceAtBooking: appointment.price ?? service.price,
+        userPackageId: appointment.packageId ?? null,
+        status: appointment.status,
+        notes: appointment.notes ?? null,
+      };
+    }),
+  });
+
+  console.log("Arabic demo seed completed.");
+  console.log(`Salon: ${salon.name}`);
+  console.log(`Admin: ${admin.username}`);
+  console.log(`Currency: ${salon.currency}`);
+  console.log(`Services: ${serviceSeeds.length}`);
+  console.log(`Staff: ${staffSeeds.length}`);
+  console.log(`Customers: ${customerSeeds.length}`);
+  console.log("Packages: 4");
+  console.log(`Appointments: ${appointments.length}`);
 }
 
 main()
-  .catch((e) => {
-    console.error("Error seeding tenant database:", e);
+  .catch((error) => {
+    console.error("Error seeding tenant database:", error);
     process.exit(1);
   })
   .finally(async () => {

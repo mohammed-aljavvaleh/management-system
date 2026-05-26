@@ -68,7 +68,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <>
       <style>{`
-        .sidebar-close-btn { display: flex; }
+        .sidebar-close-btn {
+          display: flex;
+          position: absolute;
+          top: 14px;
+          right: 14px;
+        }
+        [dir="rtl"] .sidebar-close-btn {
+          right: auto;
+          left: 14px;
+        }
         .sidebar-root {
           position: fixed;
           top: 0; left: 0; bottom: 0;
@@ -81,6 +90,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           /* Override the global * transition so only transform animates */
           transition: transform 300ms ease-in-out !important;
           transform: ${isOpen ? "translateX(0)" : "translateX(-100%)"};
+        }
+        [dir="rtl"] .sidebar-root {
+          left: auto;
+          right: 0;
+          border-right: none;
+          border-left: 1px solid var(--border);
+          transform: ${isOpen ? "translateX(0)" : "translateX(100%)"};
         }
 
         @media (min-width: 1024px) {
@@ -100,7 +116,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           className="sidebar-close-btn"
           onClick={onClose}
           style={{
-            position: "absolute", top: 14, right: 14,
             background: "none", border: "none", cursor: "pointer",
             color: "var(--muted-foreground)", padding: 4, borderRadius: 6,
             alignItems: "center", justifyContent: "center",

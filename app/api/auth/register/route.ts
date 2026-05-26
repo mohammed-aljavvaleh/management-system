@@ -11,6 +11,7 @@ interface RegisterBody {
   salonName: string;
   username: string;
   password: string;
+  currency?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -27,6 +28,10 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+  const currency = parseCurrency(body.currency);
+  if (!currency) {
+    return NextResponse.json({ error: "Currency must be either TRY or SAR." }, { status: 400 });
+  }
   const normalizedUsername = username.trim();
 
   // ── Uniqueness pre-check (friendlier error than a DB constraint violation) ─
@@ -40,7 +45,7 @@ export async function POST(req: NextRequest) {
 
   const { salon, admin } = await prisma.$transaction(async (tx) => {
     const salon = await tx.salon.create({
-      data: { name: salonName.trim() },
+      data: { name: salonName.trim(), currency },
     });
 
     const admin = await tx.admin.create({
@@ -59,7 +64,14 @@ export async function POST(req: NextRequest) {
   session.adminId = admin.id;
   session.username = admin.username;
   session.salonId = salon.id;
+  session.currency = salon.currency as "TRY" | "SAR";
   await session.save();
 
-  return NextResponse.json({ ok: true, salonId: salon.id }, { status: 201 });
+  return NextResponse.json({ ok: true, salonId: salon.id, currency: salon.currency }, { status: 201 });
+}
+
+function parseCurrency(value: string | undefined) {
+  const normalized = value?.trim().toUpperCase() || "TRY";
+  if (normalized !== "TRY" && normalized !== "SAR") return null;
+  return normalized;
 }

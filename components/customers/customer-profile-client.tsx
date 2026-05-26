@@ -8,10 +8,12 @@ import {
   Phone, Calendar, Package, ArrowLeft,
   Pencil, Trash2, Check, X, CalendarClock, FileText,
 } from "lucide-react";
-import { useLang } from "@/components/providers/language-provider";
+import { useLang, Price } from "@/components/providers/language-provider";
 import { format } from "date-fns";
-import { tr, enUS } from "date-fns/locale";
-import { localizePackageName, localizeInstallmentNote } from "@/lib/package-utils";
+import { ar } from "date-fns/locale/ar";
+import { tr } from "date-fns/locale/tr";
+import { enUS } from "date-fns/locale/en-US";
+import { localizePackageName, localizeInstallmentNote, localizeServiceName } from "@/lib/package-utils";
 
 type CustomerWithDetails = Prisma.CustomerGetPayload<{
   include: {
@@ -37,7 +39,7 @@ export function CustomerProfileClient({
 }) {
   const router = useRouter();
   const { t, lang, mounted } = useLang();
-  const dateLocale = lang === "tr" ? tr : enUS;
+  const dateLocale = lang === "ar" ? ar : (lang === "tr" ? tr : enUS);
 
   const fmt = (date: Date | string, pattern: string) => {
     if (!mounted) return "";
@@ -53,13 +55,7 @@ export function CustomerProfileClient({
     0
   );
 
-  const translateInstallmentNote = (note?: string | null) => {
-    if (!note) return "";
-    if (note === "Paid at booking") return t.customers.paidAtBooking;
-    if (note === "Session payment") return t.customers.sessionPayment;
-    if (note === "Advance payment for next session") return t.customers.advancePaymentForNextSession;
-    return note;
-  };
+  const translateInstallmentNote = (note?: string | null) => localizeInstallmentNote(note ?? null, t);
 
   return (
     <div className="admin-page" style={{ padding: "32px 36px", maxWidth: 820 }}>
@@ -69,7 +65,7 @@ export function CustomerProfileClient({
         href="/customers"
         style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--muted-foreground)", fontSize: 13, textDecoration: "none", marginBottom: 20 }}
       >
-        <ArrowLeft size={14} /> {t.customers.back}
+        {t.customers.back}
       </Link>
 
       {/* ── Profile Header ───────────────────────────────────────── */}
@@ -112,12 +108,12 @@ export function CustomerProfileClient({
             <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{t.customers.packages}</div>
           </div>
           <div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--primary)" }}>₺{totalSpent.toFixed(0)}</div>
+            <Price amount={totalSpent} showDecimals={false} size={22} style={{ fontWeight: 700, color: "var(--primary)" }} />
             <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{t.customers.totalSpent}</div>
           </div>
           {totalOwed > 0 && (
             <div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: "#c45c5c" }}>₺{totalOwed.toFixed(0)}</div>
+              <Price amount={totalOwed} showDecimals={false} size={22} style={{ fontWeight: 700, color: "#c45c5c" }} />
               <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{t.customers.totalOwed}</div>
             </div>
           )}
@@ -152,7 +148,7 @@ export function CustomerProfileClient({
                         {t.customers.started} {fmt(pkg.createdAt, "d MMM yyyy")}
                         {pkg.service && (
                           <span style={{ marginLeft: 8, color: "var(--primary)" }}>
-                            · {pkg.service.name}
+                            · {localizeServiceName(pkg.service.name, t)}
                           </span>
                         )}
                       </div>
@@ -205,16 +201,16 @@ export function CustomerProfileClient({
                   <div style={{ display: "flex", gap: 20, fontSize: 13 }}>
                     <div>
                       <span style={{ color: "var(--muted-foreground)" }}>{t.customers.Total}: </span>
-                      <strong>₺{pkg.totalPrice.toFixed(2)}</strong>
+                      <Price amount={pkg.totalPrice} style={{ fontWeight: 600 }} />
                     </div>
                     <div>
                       <span style={{ color: "var(--muted-foreground)" }}>{t.customers.totalSpent}: </span>
-                      <strong style={{ color: "var(--primary)" }}>₺{pkg.paidAmount.toFixed(2)}</strong>
+                      <Price amount={pkg.paidAmount} style={{ fontWeight: 600, color: "var(--primary)" }} />
                     </div>
                     {balance > 0 && (
                       <div>
                         <span style={{ color: "var(--muted-foreground)" }}>{t.customers.totalOwed}: </span>
-                        <strong style={{ color: "#c45c5c" }}>₺{balance.toFixed(2)}</strong>
+                        <Price amount={balance} style={{ fontWeight: 600, color: "#c45c5c" }} />
                       </div>
                     )}
                   </div>
@@ -232,7 +228,7 @@ export function CustomerProfileClient({
                               {fmt(inst.paidAt, "dd MMMM yyyy")}
                               {inst.note && ` · ${translateInstallmentNote(inst.note)}`}
                             </span>
-                            <strong style={{ color: "var(--primary)" }}>₺{inst.amount.toFixed(2)}</strong>
+                            <Price amount={inst.amount} style={{ fontWeight: 600, color: "var(--primary)" }} />
                           </div>
                         ))}
                       </div>
@@ -303,8 +299,8 @@ export function CustomerProfileClient({
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600 }}>₺{pkg.paidAmount.toFixed(2)}</div>
-                  <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{t.customers.ofTotal} ₺{pkg.totalPrice.toFixed(2)}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 600 }}><Price amount={pkg.paidAmount} /></div>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", display: "inline-flex", alignItems: "center", gap: 3 }}>{t.customers.ofTotal} <Price amount={pkg.totalPrice} size={11} /></div>
                 </div>
               </div>
             ))}
@@ -378,7 +374,7 @@ function AppointmentHistoryRow({
         <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: statusColor, flexShrink: 0 }} />
           <div>
-            <div style={{ fontWeight: 500, fontSize: 13.5 }}>{appt.service.name}</div>
+            <div style={{ fontWeight: 500, fontSize: 13.5 }}>{localizeServiceName(appt.service.name, t)}</div>
             <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>
               {fmt(appt.startTime, "dd MMMM yyyy")} · {fmt(appt.startTime, "HH:mm")} · {appt.staff.name}
               {appt.userPackage && (
@@ -403,7 +399,7 @@ function AppointmentHistoryRow({
             <FileText size={14} />
           </button>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600 }}>₺{appt.priceAtBooking.toFixed(2)}</div>
+            <Price amount={appt.priceAtBooking} style={{ fontWeight: 600 }} />
             <div style={{ fontSize: 11, color: statusColor, textTransform: "uppercase", letterSpacing: "0.04em" }}>
               {statusLabel}
             </div>
@@ -627,7 +623,7 @@ function ScheduleNextSessionDialog({
   staffList: Staff[];
   onScheduled: () => void;
 }) {
-  const { t } = useLang();
+  const { t, formatPrice } = useLang();
   const [open, setOpen] = useState(false);
 
   const tomorrow = new Date();
@@ -660,7 +656,7 @@ function ScheduleNextSessionDialog({
 
     if (payment > balance) {
       setError(
-        t.customers.paymentCannotExceed.replace("{amount}", balance.toFixed(2))
+        t.customers.paymentCannotExceed.replace("{amount}", formatPrice(balance))
       );
       setSaving(false);
       return;
@@ -668,7 +664,7 @@ function ScheduleNextSessionDialog({
 
     if (isFinalSession && Math.abs(payment - balance) > 0.009) {
       setError(
-        t.customers.finalSessionMustMatch.replace("{amount}", balance.toFixed(2))
+        t.customers.finalSessionMustMatch.replace("{amount}", formatPrice(balance))
       );
       setSaving(false);
       return;
@@ -748,7 +744,7 @@ function ScheduleNextSessionDialog({
             </p>
             {pkg.service && (
               <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", marginBottom: 20 }}>
-                {t.appointmentForm.service} <strong>{pkg.service.name}</strong> · {pkg.service.duration} {t.services.min}
+                {t.appointmentForm.service} <strong>{localizeServiceName(pkg.service.name, t)}</strong> · {pkg.service.duration} {t.services.min}
               </p>
             )}
 
@@ -764,9 +760,9 @@ function ScheduleNextSessionDialog({
                 </div>
                 <div style={{ marginBottom: 14 }}>
                   <label style={labelStyle}>{t.appointmentForm.timeSlot}</label>
-                  <select 
-                    value={timeStr} 
-                    onChange={(e) => setTimeStr(e.target.value)} 
+                  <select
+                    value={timeStr}
+                    onChange={(e) => setTimeStr(e.target.value)}
                     style={fullInputStyle}
                   >
                     {TIME_SLOTS.map((slot) => (
@@ -790,7 +786,7 @@ function ScheduleNextSessionDialog({
                     type="number"
                     min={0}
                     step="0.01"
-                    placeholder="₺0"
+                    placeholder="0"
                     value={installmentAmount}
                     onChange={(e) => {
                       if (!isFinalSession) {
@@ -802,8 +798,8 @@ function ScheduleNextSessionDialog({
                   />
                   <div style={{ marginTop: 6, fontSize: 12.5, color: "var(--muted-foreground)" }}>
                     {isFinalSession
-                      ? `${t.customers.finalSessionPaymentNote}: ₺${balance.toFixed(2)}`
-                      : `${t.customers.maximumPaymentNote}: ₺${balance.toFixed(2)}`}
+                      ? `${t.customers.finalSessionPaymentNote}: ${formatPrice(balance)}`
+                      : `${t.customers.maximumPaymentNote}: ${formatPrice(balance)}`}
                   </div>
                 </div>
 
@@ -814,11 +810,13 @@ function ScheduleNextSessionDialog({
                   display: "flex", justifyContent: "space-between",
                 }}>
                   <span>
-                   {t.customers.sessionsLeftSummary
-                     .replace("{remaining}", String(pkg.remainingSessions))
-                     .replace("{total}", String(pkg.totalSessions))}
-                 </span>
-                 <span>{t.customers.paidSummary}: ₺{pkg.paidAmount} / ₺{pkg.totalPrice}</span>
+                    {t.customers.sessionsLeftSummary
+                      .replace("{remaining}", String(pkg.remainingSessions))
+                      .replace("{total}", String(pkg.totalSessions))}
+                  </span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                    {t.customers.paidSummary}: <Price amount={pkg.paidAmount} size={12} /> / <Price amount={pkg.totalPrice} size={12} />
+                  </span>
                 </div>
 
                 {error && (

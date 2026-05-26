@@ -4,13 +4,22 @@ import { PrismaPg } from "@prisma/adapter-pg";
 const adapter = new PrismaPg(process.env.DATABASE_URL!);
 const prisma = new PrismaClient({ adapter });
 
+function parseCurrency(value: string | undefined) {
+  const normalized = value?.trim().toUpperCase() || "TRY";
+  if (normalized !== "TRY" && normalized !== "SAR") {
+    throw new Error("SEED_SALON_CURRENCY must be either TRY or SAR.");
+  }
+  return normalized;
+}
+
 async function main() {
   console.log("Starting full database seed...");
+  const currency = parseCurrency(process.env.SEED_SALON_CURRENCY);
 
   const salon = await prisma.salon.upsert({
     where: { id: "salon_default" },
-    update: { name: "Lamees Nail Salon" },
-    create: { id: "salon_default", name: "Lamees Nail Salon" },
+    update: { name: "Lamees Nail Salon", currency },
+    create: { id: "salon_default", name: "Lamees Nail Salon", currency },
   });
 
   // 1. Clean existing data

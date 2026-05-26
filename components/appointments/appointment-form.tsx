@@ -4,11 +4,11 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
-  ArrowLeft, Clock, TurkishLira, User, Phone, Calendar,
+  ArrowLeft, Clock, User, Phone, Calendar,
   Search, Plus, Minus, Package,
 } from "lucide-react";
 import Link from "next/link";
-import { useLang } from "@/components/providers/language-provider";
+import { useLang, CurrencySymbol, Price } from "@/components/providers/language-provider";
 
 type Service = { id: string; name: string; price: number; duration: number };
 type Staff = { id: string; name: string; role: string };
@@ -30,7 +30,7 @@ export function AppointmentForm({ services, staff }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { t } = useLang();
+  const { t, mounted } = useLang();
 
   // ── Customer state ──────────────────────────────────────────────
   const [customerMode, setCustomerMode] = useState<"search" | "new">("search");
@@ -222,6 +222,14 @@ export function AppointmentForm({ services, staff }: Props) {
 
   const isPackage = sessions > 1;
 
+  if (!mounted) {
+    return (
+      <div className="admin-page" style={{ padding: "32px 36px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="admin-page" style={{ padding: "32px 36px", maxWidth: 680 }}>
       {/* Header */}
@@ -380,7 +388,7 @@ export function AppointmentForm({ services, staff }: Props) {
                         if (newPhone.length === 11) {
                           return hasMatchingPrefix ? "#c45c5c" : "#2d7a2d";
                         }
-                        return !hasMatchingPrefix ? "#2d7a2d" : "var(--border)";
+                        return "var(--border)";
                       })(),
                     }}
                   />
@@ -395,7 +403,7 @@ export function AppointmentForm({ services, staff }: Props) {
                         if (newPhone.length === 11) {
                           return hasMatchingPrefix ? "#c45c5c" : "#2d7a2d";
                         }
-                        return !hasMatchingPrefix ? "#2d7a2d" : "var(--muted-foreground)";
+                        return "var(--muted-foreground)";
                       })(),
                     }}>
                       {(() => {
@@ -406,11 +414,9 @@ export function AppointmentForm({ services, staff }: Props) {
                         if (newPhone.length === 11) {
                           return hasMatchingPrefix
                             ? (t.common.phoneExists ?? "Phone number is already registered")
-                            : t.appointmentForm.validNumber;
+                            : t.appointmentForm.availableNumber;
                         }
-                        return !hasMatchingPrefix
-                          ? ((t.appointmentForm as any).availableNumber ?? "✓ Phone number is available")
-                          : t.appointmentForm.phoneNumberRules;
+                        return t.appointmentForm.phoneNumberRules;
                       })()}
                     </span>
                     <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>
@@ -425,7 +431,7 @@ export function AppointmentForm({ services, staff }: Props) {
           {/* ── Service Selection ──────────────────────────────── */}
           <section style={sectionStyle}>
             <h2 style={sectionTitleStyle}>
-              <TurkishLira size={15} color="var(--primary)" /> {t.appointmentForm.service}
+              <CurrencySymbol size={15} style={{ color: "var(--primary)" }} /> {t.appointmentForm.service}
             </h2>
             <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {services.map((svc) => (
@@ -449,7 +455,7 @@ export function AppointmentForm({ services, staff }: Props) {
                     <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
                       <Clock size={11} /> {svc.duration}{t.services.min}
                     </span>
-                    <span style={{ color: "var(--primary)", fontWeight: 500 }}>₺{svc.price}</span>
+                    <span style={{ color: "var(--primary)", fontWeight: 500 }}><Price amount={svc.price} /></span>
                   </div>
                 </button>
               ))}
@@ -515,7 +521,7 @@ export function AppointmentForm({ services, staff }: Props) {
                 {/* Total price override */}
                 <div>
                   <label style={labelStyle}>
-                    {t.appointmentForm.total} (₺)
+                    {t.appointmentForm.total} (<CurrencySymbol size={13} />)
                   </label>
                   <input
                     type="number"
@@ -532,7 +538,7 @@ export function AppointmentForm({ services, staff }: Props) {
                 {isPackage && (
                   <div>
                     <label style={labelStyle}>
-                      {t.appointmentForm.downPayment} (₺)
+                      {t.appointmentForm.downPayment} (<CurrencySymbol size={13} />)
                     </label>
                     <input
                       type="number"
@@ -546,7 +552,7 @@ export function AppointmentForm({ services, staff }: Props) {
                     />
                     {installmentAmount !== "" && (
                       <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 5 }}>
-                        {t.appointmentForm.remainingBalance} ₺{Math.max(0, totalPrice - Number(installmentAmount)).toFixed(2)}
+                        {t.appointmentForm.remainingBalance} <Price amount={Math.max(0, totalPrice - Number(installmentAmount))} />
                       </p>
                     )}
                   </div>
@@ -648,10 +654,10 @@ export function AppointmentForm({ services, staff }: Props) {
                 })()}
               </span>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontWeight: 600, fontSize: 16 }}>₺{totalPrice.toFixed(2)}</div>
+                <div style={{ fontWeight: 600, fontSize: 16 }}><Price amount={totalPrice} size={16} /></div>
                 {isPackage && installmentAmount !== "" && (
                   <div style={{ fontSize: 11, opacity: 0.8 }}>
-                    ₺{Number(installmentAmount).toFixed(2)} {t.appointmentForm.paidNow}
+                    <Price amount={Number(installmentAmount)} /> {t.appointmentForm.paidNow}
                   </div>
                 )}
               </div>

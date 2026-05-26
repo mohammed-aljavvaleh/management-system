@@ -11,6 +11,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "admin:create": "tsx scripts/create-admin.ts",
+    "tenant:seed": "tsx scripts/seed-tenant.ts",
     "postinstall": "if [ -n \"$DATABASE_URL\" ]; then prisma generate; fi"
   },
   "dependencies": {
