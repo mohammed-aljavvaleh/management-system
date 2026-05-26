@@ -3,21 +3,43 @@ import type { Metadata } from "next";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { LanguageProvider } from "@/components/providers/language-provider";
 import { MobileShell } from "@/components/mobile/mobile-shell";
+import { cookies } from "next/headers";
+import { getSession } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "Güzellik Salonu",
   description: "Güzellik Salonu Yönetim Sistemi",
 };
 
-export default function MobileLayout({
+export default async function MobileLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const lang = cookieStore.get("lang")?.value || "en";
+  const dir = lang === "ar" ? "rtl" : "ltr";
+
+  const session = await getSession();
+  let initialCurrency = session.currency;
+
+  if (!initialCurrency && session.salonId) {
+    const salon = await prisma.salon.findUnique({
+      where: { id: session.salonId },
+      select: { currency: true },
+    });
+    if (salon) {
+      initialCurrency = salon.currency as "TRY" | "SAR";
+    }
+  }
+
+  initialCurrency = initialCurrency || "TRY";
+
   return (
-    <html lang="en" className="h-full">
+    <html lang={lang} dir={dir} className="h-full">
       <body className="h-full">
-        <LanguageProvider>
+        <LanguageProvider initialCurrency={initialCurrency}>
           <QueryProvider>
             <MobileShell>{children}</MobileShell>
           </QueryProvider>

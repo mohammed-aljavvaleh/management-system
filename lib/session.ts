@@ -5,6 +5,7 @@ export type SessionData = {
   adminId?: string;
   username?: string;
   salonId?: string; // ← added for multi-tenancy
+  currency?: "TRY" | "SAR"; // ← added for SSR hydration
 };
 
 const sessionSecret = process.env.SESSION_SECRET;

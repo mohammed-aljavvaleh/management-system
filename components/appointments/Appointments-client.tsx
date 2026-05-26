@@ -21,8 +21,10 @@ import {
   FileText,
 } from "lucide-react";
 import Link from "next/link";
-import { useLang } from "@/components/providers/language-provider";
-import { tr, enUS } from "date-fns/locale";
+import { useLang, CurrencySymbol, Price } from "@/components/providers/language-provider";
+import { ar } from "date-fns/locale/ar";
+import { tr } from "date-fns/locale/tr";
+import { enUS } from "date-fns/locale/en-US";
 
 type Service = { id: string; name: string; price: number; duration: number };
 type Staff = { id: string; name: string; role: string };
@@ -75,6 +77,20 @@ function PostponeDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const TIME_SLOTS = useMemo(() => [
+    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
+    "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
+    "20:00", "20:30", "21:00", "21:30", "22:00",
+  ], []);
+
+  const timeOptions = useMemo(() => {
+    if (timeStr && !TIME_SLOTS.includes(timeStr)) {
+      return [...TIME_SLOTS, timeStr].sort();
+    }
+    return TIME_SLOTS;
+  }, [timeStr, TIME_SLOTS]);
+
   async function handleSave() {
     if (!dateStr || !timeStr) return;
     setSaving(true);
@@ -88,7 +104,7 @@ function PostponeDialog({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Failed to postpone");
+        setError(data.error ?? t.apiErrors.updateFailed);
         return;
       }
       onSaved(data);
@@ -119,12 +135,17 @@ function PostponeDialog({
         </div>
         <div style={fieldGroup}>
           <label style={labelStyle}>{t.appointments.newTime}</label>
-          <input
-            type="time"
+          <select
             value={timeStr}
             onChange={(e) => setTimeStr(e.target.value)}
             style={inputStyle}
-          />
+          >
+            {timeOptions.map((slot) => (
+              <option key={slot} value={slot}>
+                {slot}
+              </option>
+            ))}
+          </select>
         </div>
         <div style={fieldGroup}>
           <label style={labelStyle}>{t.appointments.note}</label>
@@ -143,7 +164,7 @@ function PostponeDialog({
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <button onClick={onClose} style={ghostBtnStyle} disabled={saving}>
-            Cancel
+            {t.appointments.cancel}
           </button>
           <button
             onClick={handleSave}
@@ -153,7 +174,7 @@ function PostponeDialog({
               opacity: saving ? 0.7 : 1,
             }}
           >
-            {saving ? "Saving…" : "Postpone"}
+            {saving ? t.appointments.saving : t.appointments.postpone}
           </button>
         </div>
       </div>
@@ -172,7 +193,7 @@ function NotesDialog({
   onClose: () => void;
   onSaved: (updated: Appointment) => void;
 }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [notes, setNotes] = useState(appt.notes ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -201,7 +222,7 @@ function NotesDialog({
           {t.appointments.ApptNote}
         </h3>
         <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", marginBottom: 20 }}>
-          {appt.customer.name} · {format(new Date(appt.startTime), "MMM d, h:mm a")}
+          {appt.customer.name} · {format(new Date(appt.startTime), "MMM d, HH:mm", { locale: lang === "ar" ? ar : (lang === "tr" ? tr : enUS) })}
         </p>
         <textarea
           value={notes}
@@ -237,7 +258,7 @@ function EditPriceDialog({
   onClose: () => void;
   onSaved: (updated: Appointment) => void;
 }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [price, setPrice] = useState(String(appt.priceAtBooking ?? appt.service.price));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -262,10 +283,10 @@ function EditPriceDialog({
         onClose();
       } else {
         const data = await res.json();
-        setError(data.error ?? "Failed to update price");
+        setError(data.error ?? t.apiErrors.updateFailed);
       }
     } catch (err) {
-      setError("Failed to update price");
+      setError(t.apiErrors.updateFailed);
     } finally {
       setSaving(false);
     }
@@ -278,15 +299,15 @@ function EditPriceDialog({
           {t.appointments.editPrice ?? "Edit Price"}
         </h3>
         <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", marginBottom: 20 }}>
-          {appt.customer.name} · {appt.service.name} · {format(new Date(appt.startTime), "MMM d, h:mm a")}
+          {appt.customer.name} · {appt.service.name} · {format(new Date(appt.startTime), "MMM d, HH:mm", { locale: lang === "ar" ? ar : (lang === "tr" ? tr : enUS) })}
         </p>
-        
+
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 6, color: "var(--muted-foreground)" }}>
             {t.appointments.price}
           </label>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 16, fontWeight: 600, color: "var(--primary)" }}>₺</span>
+            <CurrencySymbol size={16} style={{ color: "var(--primary)" }} />
             <input
               type="number"
               value={price}
@@ -327,7 +348,7 @@ export function AppointmentsClient({
   initialAppointments,
   staff,
 }: Props) {
-  const { t, lang } = useLang();
+  const { t, lang, mounted } = useLang();
 
   const MONTHS = [
     t.months.january, t.months.february, t.months.march, t.months.april,
@@ -367,7 +388,7 @@ export function AppointmentsClient({
 
   const selectedDayAppts = selectedDate
     ? (apptsByDay[format(selectedDate, "yyyy-MM-dd")] || [])
-    .slice()
+      .slice()
       .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
     : [];
 
@@ -381,7 +402,7 @@ export function AppointmentsClient({
     const matchStaff = filterStaff === "ALL" || a.staffId === filterStaff;
     return matchSearch && matchStatus && matchStaff;
   })
-  .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
   async function updateStatus(id: string, status: string) {
     setLoadingId(id);
@@ -433,6 +454,14 @@ export function AppointmentsClient({
     calendar: t.appointments.calendar,
     list: t.appointments.list,
   };
+
+  if (!mounted) {
+    return (
+      <div className="admin-page" style={{ padding: "32px 36px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="admin-page" style={{ padding: "32px 36px" }}>
@@ -522,7 +551,7 @@ export function AppointmentsClient({
               </h2>
               <div style={{ display: "flex", gap: 4 }}>
                 <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} style={navBtnStyle}>
-                  <ChevronLeft size={16} />
+                  {lang === "ar" ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
                 </button>
                 <button
                   onClick={() => setCurrentMonth(new Date())}
@@ -531,7 +560,7 @@ export function AppointmentsClient({
                   {t.reports.today}
                 </button>
                 <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} style={navBtnStyle}>
-                  <ChevronRight size={16} />
+                  {lang === "ar" ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
                 </button>
               </div>
             </div>
@@ -575,8 +604,8 @@ export function AppointmentsClient({
                         border: isSelected
                           ? "2px solid var(--primary)"
                           : isToday
-                          ? "1px solid var(--primary)"
-                          : "1px solid transparent",
+                            ? "1px solid var(--primary)"
+                            : "1px solid transparent",
                         background: isSelected ? "var(--primary)" : "transparent",
                         color: isSelected ? "white" : "var(--foreground)",
                         cursor: "pointer",
@@ -612,7 +641,7 @@ export function AppointmentsClient({
           <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
               <h3 style={{ fontSize: 14, fontWeight: 600 }}>
-                {selectedDate && format(selectedDate, "EEEE, d MMMM", { locale: lang === "tr" ? tr : enUS })}
+                {selectedDate && format(selectedDate, "EEEE d MMMM", { locale: lang === "ar" ? ar : (lang === "tr" ? tr : enUS) })}
               </h3>
               <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>
                 {selectedDayAppts.length} {selectedDayAppts.length !== 1 ? t.appointments.appointments : t.appointments.appointment}
@@ -709,7 +738,7 @@ export function AppointmentsClient({
               <span>{t.appointments.staffCol}</span>
               <span>{t.appointments.duration}</span>
               <span>{t.appointments.price}</span>
-              <span>Actions</span>
+              <span>{t.common.actions}</span>
             </div>
             {filteredList.length === 0 ? (
               <div style={{ padding: "40px", textAlign: "center", color: "var(--muted-foreground)" }}>
@@ -730,7 +759,7 @@ export function AppointmentsClient({
                   }}
                 >
                   <span style={{ fontWeight: 500 }}>
-                    {format(new Date(appt.startTime), "dd MMMM, HH:mm", { locale: lang === "tr" ? tr : enUS })}
+                    {format(new Date(appt.startTime), "dd MMMM, HH:mm", { locale: lang === "ar" ? ar : (lang === "tr" ? tr : enUS) })}
                   </span>
                   <div>
                     <div style={{ fontWeight: 500 }}>{appt.customer.name}</div>
@@ -753,7 +782,7 @@ export function AppointmentsClient({
                     {t.services.min}
                   </span>
                   <span style={{ color: "var(--primary)", fontWeight: 500 }}>
-                    ₺{appt.priceAtBooking != null ? appt.priceAtBooking : appt.service.price}
+                    <Price amount={appt.priceAtBooking != null ? appt.priceAtBooking : appt.service.price} />
                   </span>
                   <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
                     {/* Status select */}
@@ -940,12 +969,12 @@ function AppointmentCard({
                 gap: 4,
               }}
             >
-              ₺ {t.appointments.editPrice ?? "Edit Price"}
+              <CurrencySymbol size={12} /> {t.appointments.editPrice ?? "Edit Price"}
             </button>
           )}
         </div>
         <div style={{ fontSize: 13, fontWeight: 500, color: "var(--primary)" }}>
-          ₺{appt.priceAtBooking != null ? appt.priceAtBooking : appt.service.price}
+          <Price amount={appt.priceAtBooking != null ? appt.priceAtBooking : appt.service.price} />
         </div>
       </div>
     </div>

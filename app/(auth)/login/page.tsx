@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLang } from "@/components/providers/language-provider";
+import { LanguageToggle } from "@/components/layout/language-toggle";
 
 export default function LoginPage() {
   const { t } = useLang();
@@ -96,9 +97,11 @@ export default function LoginPage() {
     <div style={{
       minHeight: "100vh",
       display: "flex",
+      flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
       background: "var(--background)",
+      gap: 16,
     }}>
       <div style={{
         background: "var(--card)",
@@ -276,6 +279,9 @@ export default function LoginPage() {
             </button>
           </form>
         )}
+      </div>
+      <div style={{ width: 180 }}>
+        <LanguageToggle />
       </div>
     </div>
   );

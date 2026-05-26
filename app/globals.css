@@ -26,6 +26,8 @@
 
   --font-display: 'Cormorant Garamond', serif;
   --font-body: 'DM Sans', sans-serif;
+  --font-sans: 'DM Sans', sans-serif;
+  --font-serif: 'Cormorant Garamond', serif;
 }
 
 *,
@@ -36,7 +38,7 @@
   padding: 0;
 }
 
-body {
+body, input, select, textarea, button {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-body);
@@ -303,4 +305,3 @@ textarea,
     grid-template-columns: 1fr !important;
   }
 }
-

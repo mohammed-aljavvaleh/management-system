@@ -106,8 +106,8 @@
     "noCustomers": "No customers yet. They will appear here once appointments are booked.",
     "noResults": "No customers match your search.",
     "sessionsLeft": "sessions left",
-    "ViewDetails": "View Details",
-    "back": "All Customers",
+    "ViewDetails": "View Details →",
+    "back": "← All Customers",
     "customerSince": "Customer since",
     "packages": "Packages",
     "totalSpent": "Paid",
@@ -140,8 +140,8 @@
     "searchResults": "Found {count} results for \"{query}\"",
     "searchResultOne": "Found 1 result for \"{query}\"",
     "invalidPaymentAmount": "Invalid payment amount",
-    "paymentCannotExceed": "Payment cannot exceed ₺{amount}",
-    "finalSessionMustMatch": "Final session payment must equal ₺",
+    "paymentCannotExceed": "Payment cannot exceed {amount}",
+    "finalSessionMustMatch": "Final session payment must equal {amount}",
     "finalSessionPaymentNote": "Final session payment is fixed to",
     "maximumPaymentNote": "Maximum payment is",
     "failedToSchedule": "Failed to schedule",
@@ -162,6 +162,7 @@
     "fullNamePlaceholder": "e.g. Sarah Johnson",
     "phoneNumber": "Phone Number",
     "validNumber": "✓ Valid phone number",
+    "availableNumber": "✓ Phone number is available",
     "phonePlaceholder": "+90 555 000 0000",
     "phoneNumberRules": "Must start with 05 · exactly 11 digits",
     "serviceStaff": "Service & Staff",
@@ -219,7 +220,7 @@
     "name": "Service Name",
     "namePlaceholder": "e.g. Gel Manicure",
     "priceRange": "Price Range",
-    "price": "Price (₺)",
+    "price": "Price",
     "duration": "Duration (min)",
     "appointments": "appointments",
     "noServices": "No services yet",
@@ -228,7 +229,8 @@
     "saving": "Saving...",
     "cancel": "Cancel",
     "deleteConfirm": "Delete this service? This cannot be undone.",
-    "min": "min"
+    "min": "min",
+    "cannotDelete": "Cannot delete — service has appointments"
   },
   "staff": {
     "title": "Staff",
@@ -293,7 +295,6 @@
     "topServices": "Top Services",
     "staffPerformance": "Staff Performance",
     "noData": "No data for this period",
-    "bookings": "bookings",
     "revenue": "revenue",
     "thisYear": "This Year",
     "customRange": "Custom Range",
@@ -319,7 +320,10 @@
     "trendMonthSame": "same as last month",
     "trendYearSame": "same as last year",
     "trendCustomSame": "same as previous period",
-    "completed": "Completed"
+    "completed": "Completed",
+    "previous": "Previous",
+    "booking": "booking",
+    "bookings": "bookings"
   },
   "common": {
     "loading": "Loading...",
@@ -345,8 +349,7 @@
     "today": "Today",
     "tomorrow": "Tomorrow",
     "yesterday": "Yesterday",
-    "all": "All",
-    "currency": "SAR"
+    "all": "All"
   },
   "weekDays": {
     "sunday": "Sun",
@@ -357,15 +360,45 @@
     "friday": "Fri",
     "saturday": "Sat"
   },
+  "heatmapDays": {
+    "sunday": "Sun",
+    "monday": "Mon",
+    "tuesday": "Tue",
+    "wednesday": "Wed",
+    "thursday": "Thu",
+    "friday": "Fri",
+    "saturday": "Sat"
+  },
+  "heatmapDaysFull": {
+    "sunday": "Sunday",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday"
+  },
   "months": {
-    "january": "January", "february": "February", "march": "March",
-    "april": "April", "may": "May", "june": "June", "july": "July",
-    "august": "August", "september": "September", "october": "October",
-    "november": "November", "december": "December"
-},
+    "january": "January",
+    "february": "February",
+    "march": "March",
+    "april": "April",
+    "may": "May",
+    "june": "June",
+    "july": "July",
+    "august": "August",
+    "september": "September",
+    "october": "October",
+    "november": "November",
+    "december": "December"
+  },
   "fullDays": {
-    "sunday": "Sunday", "monday": "Monday", "tuesday": "Tuesday",
-    "wednesday": "Wednesday", "thursday": "Thursday", "friday": "Friday",
+    "sunday": "Sunday",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
     "saturday": "Saturday"
   },
   "apiErrors": {
@@ -422,7 +455,18 @@
     "paidAtBooking": "Paid at booking",
     "advancePayment": "Advance payment for next session",
     "downPayment": "Down payment",
+    "installment": "Installment",
     "installment1": "Installment 1",
-    "firstMonth": "First month"
+    "installmentTemplate": "Installment {number}",
+    "firstMonth": "First month",
+    "knownNames": {
+      "classicManicure": "Classic Manicure",
+      "gelExtensions": "Gel Extensions",
+      "pedicureDeluxe": "Pedicure Deluxe",
+      "laserFullBody": "Laser - Full Body",
+      "nailArtCustom": "Nail Art Custom",
+      "laserPackage": "Laser Package",
+      "monthlyManicureClub": "Monthly Manicure Club"
+    }
   }
 }

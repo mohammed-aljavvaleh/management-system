@@ -196,7 +196,7 @@ function CreateCustomerDialog({
                 if (phone.length === 11) {
                   return hasMatchingPrefix ? "#c45c5c" : "#2d7a2d";
                 }
-                return !hasMatchingPrefix ? "#2d7a2d" : "var(--border)";
+                return "var(--border)";
               })(),
             }}
             onFocus={(e) => (e.currentTarget.style.borderColor = "var(--primary)")}
@@ -213,7 +213,7 @@ function CreateCustomerDialog({
                 if (phone.length === 11) {
                   return hasMatchingPrefix ? "#c45c5c" : "#2d7a2d";
                 }
-                return !hasMatchingPrefix ? "#2d7a2d" : "var(--muted-foreground)";
+                return "var(--muted-foreground)";
               })()
             }}>
               {(() => {
@@ -224,11 +224,9 @@ function CreateCustomerDialog({
                 if (phone.length === 11) {
                   return hasMatchingPrefix
                     ? (t.common.phoneExists ?? "Phone number is already registered")
-                    : t.appointmentForm.validNumber;
+                    : t.appointmentForm.availableNumber;
                 }
-                return !hasMatchingPrefix
-                  ? ((t.appointmentForm as any).availableNumber ?? "✓ Phone number is available")
-                  : t.appointmentForm.phoneNumberRules;
+                return t.appointmentForm.phoneNumberRules;
               })()}
             </span>
             <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>
@@ -298,10 +296,10 @@ export function CustomersClient({ customers: initialCustomers }: { customers: Cu
 
   const filtered = query.trim()
     ? customers.filter(
-        (c) =>
-          c.name.toLowerCase().includes(query.toLowerCase()) ||
-          c.phone.includes(query.trim())
-      )
+      (c) =>
+        c.name.toLowerCase().includes(query.toLowerCase()) ||
+        c.phone.includes(query.trim())
+    )
     : customers;
 
   return (
@@ -481,7 +479,7 @@ export function CustomersClient({ customers: initialCustomers }: { customers: Cu
                       padding: "4px 10px", background: "var(--muted)",
                       borderRadius: 20,
                     }}>
-                      {t.customers.ViewDetails} →
+                      {t.customers.ViewDetails}
                     </div>
                   </div>
                 </div>

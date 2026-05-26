@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Pencil, Trash2, X, IdCardLanyard, CalendarDays, TurkishLira } from "lucide-react";
-import { useLang } from "@/components/providers/language-provider";
+import { Plus, Pencil, Trash2, X, IdCardLanyard, CalendarDays, TurkishLira, SaudiRiyal } from "lucide-react";
+import { useLang, Price } from "@/components/providers/language-provider";
 
 type StaffMember = {
   id: string;
@@ -42,7 +42,7 @@ const AVATAR_COLORS = [
 ];
 
 export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
-  const { t } = useLang();
+  const { t, currency } = useLang();
   const [staff, setStaff] = useState(initialStaff);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -156,7 +156,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
         {[
           { label: t.staff.totalTeam, value: staff.length.toString(), icon: IdCardLanyard, color: "#c9956b" },
           { label: t.appointments.totalAppointments, value: totalAppointments.toString(), icon: CalendarDays, color: "#7b9ec9" },
-          { label: t.staff.revenueGenerated, value: `₺${totalRevenue.toFixed(0)}`, icon: TurkishLira, color: "#9ec97b" },
+          { label: t.staff.revenueGenerated, value: <Price amount={totalRevenue} showDecimals={false} size={20} style={{ fontWeight: 600 }} />, icon: currency === "TRY" ? TurkishLira : SaudiRiyal, color: "#9ec97b" },
         ].map((stat) => (
           <div key={stat.label} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ width: 38, height: 38, borderRadius: 10, background: stat.color + "18", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -239,7 +239,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
 
                 {/* Revenue */}
                 <div style={{ fontSize: 14, fontWeight: 500, color: "var(--primary)" }}>
-                  ₺{member.totalRevenue.toFixed(2)}
+                  <Price amount={member.totalRevenue} />
                 </div>
 
                 {/* Actions */}

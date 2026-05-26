@@ -47,10 +47,10 @@ A modern admin panel for managing nail salon appointments, customers, services, 
    # Push schema to database
    npm run db:push
 
-   # Seed with sample data
+   # Seed with sample data (set SEED_SALON_CURRENCY=SAR for a Saudi salon)
    npm run db:seed
 
-   # Create admin user
+   # Create admin user (set ADMIN_CURRENCY=SAR or TRY)
    npx tsx scripts/create-admin.ts
    ```
 
@@ -83,6 +83,7 @@ A modern admin panel for managing nail salon appointments, customers, services, 
    SESSION_SECRET=your-secure-random-session-secret-here
    SESSION_COOKIE_SECURE=true
    NEXT_PUBLIC_SITE_URL=https://your-app-name.vercel.app
+   ADMIN_CURRENCY=TRY
    ```
 
 3. **Deploy**
@@ -102,10 +103,10 @@ npx vercel link
 npx vercel env pull .env.local
 npm run db:push
 
-# Seed with sample data (optional)
+# Seed with sample data (optional; set SEED_SALON_CURRENCY=SAR for a Saudi salon)
 npm run db:seed
 
-# Create admin user
+# Create admin user (set ADMIN_CURRENCY=SAR or TRY)
 npx tsx scripts/create-admin.ts
 ```
 
@@ -117,11 +118,14 @@ npx tsx scripts/create-admin.ts
 | `SESSION_SECRET` | Random string for session encryption | Yes |
 | `SESSION_COOKIE_SECURE` | Force HTTPS-only cookies | No |
 | `NEXT_PUBLIC_SITE_URL` | Your deployed app URL | No |
+| `ADMIN_CURRENCY` | Currency for salons created by `scripts/create-admin.ts`; `TRY` or `SAR` | No |
+| `SEED_SALON_CURRENCY` | Currency for the default seeded salon; `TRY` or `SAR` | No |
 
 ## Database Schema
 
 The application uses the following main entities:
 - **Admin**: Authentication users
+- **Salon**: Tenant root with static `currency` (`TRY` or `SAR`)
 - **Customer**: Client information
 - **Service**: Available services
 - **Staff**: Salon employees

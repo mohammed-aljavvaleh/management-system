@@ -191,19 +191,18 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
   });
   const currentMonthRevenue = monthlyCompleted._sum.priceAtBooking || 0;
 
-  // Compute Heatmap (6 rows [Pzt-Cmt] x 12 cols [09:00-20:00])
-  const heatmapData = Array.from({ length: 6 }, () => Array(12).fill(0));
+  // Compute Heatmap (7 rows [Sun-Sat] x 12 cols [09:00-20:00])
+  const heatmapData = Array.from({ length: 7 }, () => Array(12).fill(0));
   for (const a of appointments) {
     if (a.status === "CANCELLED") continue;
-    const date = a.startTime;
-    const day = date.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
-    if (day >= 1 && day <= 6) {
-      const row = day - 1; // Mon = 0, ..., Sat = 5
-      const hour = date.getHours();
-      if (hour >= 9 && hour <= 20) {
-        const col = hour - 9; // 09:00 = 0, ..., 20:00 = 11
-        heatmapData[row][col]++;
-      }
+    // Shift by +3 hours to get local time in Saudi/Turkey timezone (UTC+3)
+    const localDate = new Date(a.startTime.getTime() + 3 * 60 * 60 * 1000);
+    const day = localDate.getUTCDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+    const hour = localDate.getUTCHours();
+    if (hour >= 9 && hour <= 20) {
+      const row = day; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      const col = hour - 9; // 09:00 = 0, ..., 20:00 = 11
+      heatmapData[row][col]++;
     }
   }
 

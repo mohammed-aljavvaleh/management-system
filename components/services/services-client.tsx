@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Clock, X, Scissors, TurkishLira } from "lucide-react";
-import { useLang } from "@/components/providers/language-provider";
+import { Plus, Pencil, Trash2, Clock, X, Scissors, TurkishLira, SaudiRiyal } from "lucide-react";
+import { useLang, CurrencySymbol, Price } from "@/components/providers/language-provider";
 
 type Service = { id: string; name: string; price: number; duration: number };
 
 export function ServicesClient({ initialServices }: { initialServices: Service[] }) {
-  const { t } = useLang();
+  const { t, currency } = useLang();
   const [services, setServices] = useState(initialServices);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -46,13 +46,13 @@ export function ServicesClient({ initialServices }: { initialServices: Service[]
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !price || !duration) {
-      setError("All fields are required");
+      setError(t.common.requiredFields);
       return;
     }
     const priceNum = parseFloat(price);
     const durNum = parseInt(duration);
-    if (isNaN(priceNum) || priceNum < 0) { setError("Invalid price"); return; }
-    if (isNaN(durNum) || durNum < 5) { setError("Duration must be at least 5 minutes"); return; }
+    if (isNaN(priceNum) || priceNum < 0) { setError(t.appointments.invalidPrice); return; }
+    if (isNaN(durNum) || durNum < 5) { setError(t.apiErrors.durationRange); return; }
 
     setLoadingId("form");
     setError("");
@@ -90,10 +90,10 @@ export function ServicesClient({ initialServices }: { initialServices: Service[]
     setLoadingId(id);
     try {
       const res = await fetch(`/api/services/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Cannot delete — service may have appointments");
+      if (!res.ok) throw new Error(t.services.cannotDelete);
       setServices((prev) => prev.filter((s) => s.id !== id));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete");
+      alert(err instanceof Error ? err.message : t.apiErrors.deleteFailed);
     } finally {
       setLoadingId(null);
     }
@@ -123,7 +123,7 @@ export function ServicesClient({ initialServices }: { initialServices: Service[]
         {[
           { label: t.services.total, value: services.length.toString(), icon: Scissors, color: "#c9956b" },
           { label: t.services.duration, value: `${avgDuration} ${t.services.min}`, icon: Clock, color: "#7b9ec9" },
-          { label: t.services.priceRange, value: services.length ? `₺${Math.min(...services.map(s => s.price))} – ₺${Math.max(...services.map(s => s.price))}` : "—", icon: TurkishLira, color: "#9ec97b" },
+          { label: t.services.priceRange, value: services.length ? <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Price amount={Math.min(...services.map(s => s.price))} /> – <Price amount={Math.max(...services.map(s => s.price))} /></span> : "—", icon: currency === "TRY" ? TurkishLira : SaudiRiyal, color: "#9ec97b" },
         ].map((stat) => (
           <div key={stat.label} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ width: 38, height: 38, borderRadius: 10, background: stat.color + "18", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -173,7 +173,7 @@ export function ServicesClient({ initialServices }: { initialServices: Service[]
                     <Clock size={13} />{svc.duration} {t.services.min}
                   </span>
                   <span style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--primary)", fontWeight: 600 }}>
-                    <TurkishLira size={13} />{svc.price.toFixed(2)}
+                    <Price amount={svc.price} />
                   </span>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
@@ -236,12 +236,12 @@ export function ServicesClient({ initialServices }: { initialServices: Service[]
                 </div>
                 <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                   <div>
-                    <label style={labelStyle}>{t.services.price}</label>
+                    <label style={labelStyle}>{t.services.price} (<CurrencySymbol size={13} />)</label>
                     <input
                       type="number"
                       value={price}
                       onChange={(e) => setPrice(e.target.value)}
-                      placeholder="250.00 ₺"
+                      placeholder="0.00"
                       min="0"
                       step="10"
                       required
@@ -278,7 +278,7 @@ export function ServicesClient({ initialServices }: { initialServices: Service[]
                     disabled={loadingId === "form"}
                     style={{ ...btnStyle, flex: 2, background: "var(--primary)", color: "white", opacity: loadingId === "form" ? 0.7 : 1 }}
                   >
-                    {loadingId === "form" ? "Saving..." : editId ? t.services.save : t.services.addService}
+                    {loadingId === "form" ? t.services.saving : editId ? t.services.save : t.services.addService}
                   </button>
                 </div>
               </div>

@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { CalendarDays, TurkishLira, Clock, IdCardLanyard, Scissors, TrendingUp } from "lucide-react";
+import { CalendarDays, TurkishLira, Clock, IdCardLanyard, Scissors, TrendingUp, SaudiRiyal } from "lucide-react";
 import Link from "next/link";
-import { useLang } from "@/components/providers/language-provider";
-import { tr, enUS } from "date-fns/locale";
+import { useLang, Price } from "@/components/providers/language-provider";
+import { ar } from "date-fns/locale/ar";
+import { tr } from "date-fns/locale/tr";
+import { enUS } from "date-fns/locale/en-US";
 
 type Appointment = {
   id: string;
@@ -32,7 +34,7 @@ export function DashboardClient({
   servicesCount,
   staffCount,
 }: Props) {
-  const { t, lang } = useLang();
+  const { t, lang, currency, mounted } = useLang();
   const [adminName, setAdminName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -65,8 +67,8 @@ export function DashboardClient({
   const stats = [
     {
       label: t.dashboard.todayRevenue,
-      value: `₺${todayRevenue.toFixed(2)}`,
-      icon: TurkishLira,
+      value: <Price amount={todayRevenue} size={20} style={{ fontWeight: 600 }} />,
+      icon: currency === "TRY" ? TurkishLira : SaudiRiyal,
       sub: `${todayAppointments.length} ${t.dashboard.appointments}`,
       color: "#c9956b",
     },
@@ -93,12 +95,20 @@ export function DashboardClient({
     },
   ];
 
+  if (!mounted) {
+    return (
+      <div className="admin-page" style={{ padding: "32px 36px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="admin-page" style={{ padding: "32px 36px", maxWidth: 1100 }}>
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
         <p style={{ color: "var(--muted-foreground)", fontSize: 13, marginBottom: 4 }}>
-          {format(new Date(), "EEEE, d MMMM yyyy", { locale: lang === "tr" ? tr : enUS })}
+          {format(new Date(), "EEEE, d MMMM yyyy", { locale: lang === "ar" ? ar : (lang === "tr" ? tr : enUS) })}
         </p>
         <h1 style={{ fontFamily: "var(--font-display)", fontSize: 32, fontWeight: 500, color: "var(--foreground)" }}>
           {`${getGreeting(t)}${adminName ? ` ${adminName}` : ""}`}
@@ -230,7 +240,7 @@ export function DashboardClient({
                 </div>
 
                 <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--primary)", width: 60, textAlign: "right" }}>
-                  ₺{appt.priceAtBooking}
+                  <Price amount={appt.priceAtBooking} />
                 </div>
 
                 <span

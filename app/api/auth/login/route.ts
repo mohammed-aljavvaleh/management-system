@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
   session.adminId  = admin.id;
   session.username = admin.username;
   session.salonId  = admin.salonId;   // ← the key addition
+  session.currency = admin.salon.currency as "TRY" | "SAR";
   await session.save();
 
   return NextResponse.json({ ok: true, salonId: admin.salonId });

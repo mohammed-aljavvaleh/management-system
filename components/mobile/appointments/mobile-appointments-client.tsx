@@ -2,10 +2,12 @@
 
 import { useState, useMemo } from "react";
 import { format, isToday, isTomorrow, isYesterday } from "date-fns";
-import { tr, enUS } from "date-fns/locale";
+import { ar } from "date-fns/locale/ar";
+import { tr } from "date-fns/locale/tr";
+import { enUS } from "date-fns/locale/en-US";
 import { CheckCircle, XCircle, Clock, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLang } from "@/components/providers/language-provider";
+import { Price, useLang } from "@/components/providers/language-provider";
 
 type Appointment = {
   id: string;
@@ -28,7 +30,7 @@ interface Props {
 }
 
 export function MobileAppointmentsClient({ initialAppointments }: Props) {
-  const { t, lang } = useLang();
+  const { t, lang, mounted } = useLang();
   const [appointments, setAppointments] = useState(initialAppointments);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"ALL" | "SCHEDULED" | "COMPLETED" | "CANCELLED">("ALL");
@@ -44,7 +46,7 @@ export function MobileAppointmentsClient({ initialAppointments }: Props) {
     if (isToday(date)) return t.common.today;
     if (isTomorrow(date)) return t.common.tomorrow;
     if (isYesterday(date)) return t.common.yesterday;
-    const locale = lang === "tr" ? tr : enUS;
+    const locale = lang === "ar" ? ar : (lang === "tr" ? tr : enUS);
     return format(date, "EEE, MMM d", { locale });
   }
 
@@ -88,6 +90,14 @@ export function MobileAppointmentsClient({ initialAppointments }: Props) {
     } finally {
       setUpdatingId(null);
     }
+  }
+
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-rose-500"></div>
+      </div>
+    );
   }
 
   return (
@@ -152,7 +162,7 @@ export function MobileAppointmentsClient({ initialAppointments }: Props) {
                           {a.service.name} · {a.staff.name}
                         </p>
                         <p className="text-xs text-zinc-400 mt-0.5">
-                          {format(time, "h:mm a")} · {a.service.duration} {t.services.min}
+                          {format(time, "HH:mm", { locale: lang === "ar" ? ar : (lang === "tr" ? tr : enUS) })} · {a.service.duration} {t.services.min}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1 flex-none">
@@ -166,7 +176,7 @@ export function MobileAppointmentsClient({ initialAppointments }: Props) {
                           {cfg?.label}
                         </span>
                         <span className="text-xs font-semibold text-zinc-700">
-                          {a.priceAtBooking} {t.common.currency}
+                          <Price amount={a.priceAtBooking} size={12} />
                         </span>
                       </div>
                     </div>

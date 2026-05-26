@@ -62,8 +62,8 @@
     "noCustomers": "Henüz müşteri yok. Randevular oluşturuldukça burada görünecek.",
     "noResults": "Arama kriterlerinize uyan müşteri bulunamadı.",
     "sessionsLeft": "Oturum kaldı",
-    "ViewDetails": "Detayları Görüntüle",
-    "back": "Tüm Müşteriler",
+    "ViewDetails": "Detayları Görüntüle →",
+    "back": "← Tüm Müşteriler",
     "customerSince": "Müşteri Oluşturulma Tarihi",
     "packages": "Paketler",
     "totalSpent": "Ödenmiş",
@@ -96,8 +96,8 @@
     "searchResults": "\"{query}\" için {count} sonuç bulundu",
     "searchResultOne": "\"{query}\" için 1 sonuç bulundu",
     "invalidPaymentAmount": "Geçersiz ödeme tutarı",
-    "paymentCannotExceed": "Ödeme ₺{amount} tutarını aşamaz",
-    "finalSessionMustMatch": "Son seans ödemesi ₺{amount} ile eşleşmelidir",
+    "paymentCannotExceed": "Ödeme {amount} tutarını aşamaz",
+    "finalSessionMustMatch": "Son seans ödemesi {amount} ile eşleşmelidir",
     "finalSessionPaymentNote": "Son seans ödemesi olarak sabitlenmiştir",
     "maximumPaymentNote": "Maksimum ödeme",
     "failedToSchedule": "Planlama başarısız oldu",
@@ -135,7 +135,6 @@
     "addNote": "Not Ekle",
     "ApptNote": "Randevu Notu",
     "editNote": "Notu Düzenle",
-    "Postpone": "Ertele",
     "deleteConfirm": "Bu randevu silinsin mi?",
     "postponeNotePlaceholder": "örn. Müşteri iki kez erteledi, onay için arayın…",
     "postpone": "Ertele",
@@ -163,6 +162,7 @@
     "fullNamePlaceholder": "örn. Ayşe Kaya",
     "phoneNumber": "Telefon Numarası*",
     "validNumber": "✓ Geçerli telefon numarası",
+    "availableNumber": "✓ Telefon numarası kullanılabilir",
     "phonePlaceholder": "+90 555 000 0000",
     "phoneNumberRules": "05 ile başlamalı · tam 11 rakamdan oluşmalı",
     "serviceStaff": "Hizmet ve Personel",
@@ -220,7 +220,7 @@
     "name": "Hizmet Adı",
     "namePlaceholder": "örn. Jel Manikür",
     "priceRange": "Fiyat Aralığı",
-    "price": "Fiyat (₺)",
+    "price": "Fiyat",
     "duration": "Süre (dk)",
     "appointments": "randevu",
     "noServices": "Henüz hizmet yok",
@@ -229,7 +229,8 @@
     "saving": "Kaydediliyor...",
     "cancel": "İptal",
     "deleteConfirm": "Bu hizmet silinsin mi? Bu işlem geri alınamaz.",
-    "min": "dk"
+    "min": "dk",
+    "cannotDelete": "Silinemez — hizmetin randevuları var"
   },
   "staff": {
     "title": "Personel",
@@ -294,7 +295,6 @@
     "topServices": "En Popüler Hizmetler",
     "staffPerformance": "Personel Performansı",
     "noData": "Bu dönem için veri yok",
-    "bookings": "rezervasyon",
     "revenue": "gelir",
     "thisYear": "Bu Yıl",
     "customRange": "Özel Aralık",
@@ -320,7 +320,10 @@
     "trendMonthSame": "geçen ay ile aynı",
     "trendYearSame": "geçen yıl ile aynı",
     "trendCustomSame": "önceki dönem ile aynı",
-    "completed": "Tamamlandı"
+    "completed": "Tamamlandı",
+    "previous": "Önceki",
+    "booking": "randevu",
+    "bookings": "randevu"
   },
   "common": {
     "loading": "Yükleniyor...",
@@ -346,8 +349,7 @@
     "today": "Bugün",
     "tomorrow": "Yarın",
     "yesterday": "Dün",
-    "all": "Tümü",
-    "currency": "SAR"
+    "all": "Tümü"
   },
   "weekDays": {
     "sunday": "Paz",
@@ -358,15 +360,45 @@
     "friday": "Cum",
     "saturday": "Cmt"
   },
+  "heatmapDays": {
+    "sunday": "Paz",
+    "monday": "Pzt",
+    "tuesday": "Sal",
+    "wednesday": "Çar",
+    "thursday": "Per",
+    "friday": "Cum",
+    "saturday": "Cmt"
+  },
+  "heatmapDaysFull": {
+    "sunday": "Pazar",
+    "monday": "Pazartesi",
+    "tuesday": "Salı",
+    "wednesday": "Çarşamba",
+    "thursday": "Perşembe",
+    "friday": "Cuma",
+    "saturday": "Cumartesi"
+  },
   "months": {
-    "january": "Ocak", "february": "Şubat", "march": "Mart",
-    "april": "Nisan", "may": "Mayıs", "june": "Haziran", "july": "Temmuz",
-    "august": "Ağustos", "september": "Eylül", "october": "Ekim",
-    "november": "Kasım", "december": "Aralık"
- },
+    "january": "Ocak",
+    "february": "Şubat",
+    "march": "Mart",
+    "april": "Nisan",
+    "may": "Mayıs",
+    "june": "Haziran",
+    "july": "Temmuz",
+    "august": "Ağustos",
+    "september": "Eylül",
+    "october": "Ekim",
+    "november": "Kasım",
+    "december": "Aralık"
+  },
   "fullDays": {
-    "sunday": "Pazar", "monday": "Pazartesi", "tuesday": "Salı",
-    "wednesday": "Çarşamba", "thursday": "Perşembe", "friday": "Cuma",
+    "sunday": "Pazar",
+    "monday": "Pazartesi",
+    "tuesday": "Salı",
+    "wednesday": "Çarşamba",
+    "thursday": "Perşembe",
+    "friday": "Cuma",
     "saturday": "Cumartesi"
   },
   "apiErrors": {
@@ -423,7 +455,18 @@
     "paidAtBooking": "Rezervasyon anında ödeme",
     "advancePayment": "Sonraki seans için ön ödeme",
     "downPayment": "Ön ödeme",
+    "installment": "Taksit",
     "installment1": "Taksit 1",
-    "firstMonth": "İlk ay"
+    "installmentTemplate": "Taksit {number}",
+    "firstMonth": "İlk ay",
+    "knownNames": {
+      "classicManicure": "Klasik Manikür",
+      "gelExtensions": "Jel Uzatma",
+      "pedicureDeluxe": "Deluxe Pedikür",
+      "laserFullBody": "Lazer - Tüm Vücut",
+      "nailArtCustom": "Özel Tırnak Süsleme",
+      "laserPackage": "Lazer Paketi",
+      "monthlyManicureClub": "Aylık Manikür Kulübü"
+    }
   }
 }
