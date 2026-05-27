@@ -32,6 +32,8 @@ export async function GET() {
           id: salon.id,
           name: salon.name,
           currency,
+          openingHour: salon.openingHour,
+          closingHour: salon.closingHour,
         }
       : null,
   });

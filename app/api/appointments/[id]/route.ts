@@ -51,6 +51,11 @@ export async function PATCH(
         return NextResponse.json({ error: t.apiErrors.invalidInstallment }, { status: 400 });
       }
 
+      const paymentMethod = body.paymentMethod;
+      if (paymentMethod && paymentMethod !== "CASH" && paymentMethod !== "CARD") {
+        return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
+      }
+
       const appointment = await prisma.$transaction(async (tx) => {
         const current = await tx.appointment.findFirst({
           where: { id, salonId },
@@ -62,7 +67,7 @@ export async function PATCH(
 
         const updatedRows = await tx.appointment.updateManyAndReturn({
           where: { id, salonId },
-          data: { status: "COMPLETED" },
+          data: { status: "COMPLETED", paymentMethod: paymentMethod || null },
           include: { service: true, staff: true, customer: true, userPackage: true },
         });
         const updated = updatedRows[0];
@@ -221,9 +226,52 @@ export async function PATCH(
         return NextResponse.json({ error: t.apiErrors.invalidStatus }, { status: 400 });
       }
       data.status = body.status;
+
+      // Handle package session decrement when restoring a cancelled appointment
+      const current = await prisma.appointment.findFirst({
+        where: { id, salonId },
+        select: { status: true, userPackageId: true },
+      });
+
+      if (current && current.userPackageId) {
+        const isCurrentlyCancelled = current.status === "CANCELLED";
+        const isNewStatusActive = body.status === "SCHEDULED" || body.status === "COMPLETED";
+
+        if (isCurrentlyCancelled && isNewStatusActive) {
+          const pkg = await prisma.userPackage.findFirst({
+            where: { id: current.userPackageId, salonId },
+            select: { remainingSessions: true },
+          });
+          if (!pkg || pkg.remainingSessions <= 0) {
+            return NextResponse.json(
+              { error: t.apiErrors.noRemainingSessions || "No remaining sessions in package" },
+              { status: 400 }
+            );
+          }
+          await prisma.userPackage.updateMany({
+            where: { id: current.userPackageId, salonId },
+            data: { remainingSessions: { decrement: 1 } },
+          });
+        }
+      }
     }
     if (body.notes !== undefined) data.notes = body.notes || null;
+    if (body.paymentMethod !== undefined) {
+      if (body.paymentMethod && body.paymentMethod !== "CASH" && body.paymentMethod !== "CARD") {
+        return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
+      }
+      data.paymentMethod = body.paymentMethod || null;
+    }
     if (body.priceAtBooking !== undefined) {
+      const appt = await prisma.appointment.findFirst({
+        where: { id, salonId },
+        select: { userPackageId: true },
+      });
+      if (!appt) return NextResponse.json({ error: t.apiErrors.notFound }, { status: 404 });
+      if (appt.userPackageId) {
+        return NextResponse.json({ error: "Cannot edit price of package appointments" }, { status: 400 });
+      }
+
       const priceAtBooking = parseMoney(body.priceAtBooking);
       if (priceAtBooking === null) {
         return NextResponse.json({ error: t.apiErrors.invalidPrice }, { status: 400 });
@@ -254,17 +302,41 @@ export async function DELETE(
   const auth = await requireApiSession();
   if (auth.response) return auth.response;
   const { salonId } = auth.session;
+  const t = await getTranslations();
   try {
     const { id } = await params;
-    const result = await prisma.appointment.deleteMany({ where: { id, salonId } });
-    if (result.count === 0) {
-      const t = await getTranslations();
+
+    const result = await prisma.$transaction(async (tx) => {
+      const appt = await tx.appointment.findFirst({
+        where: { id, salonId },
+        select: { userPackageId: true, status: true },
+      });
+
+      if (!appt) return null;
+
+      // If active (not cancelled) package appointment, restore the credit
+      if (appt.userPackageId && appt.status !== "CANCELLED") {
+        await tx.userPackage.updateMany({
+          where: { id: appt.userPackageId, salonId },
+          data: { remainingSessions: { increment: 1 } },
+        });
+      }
+
+      await tx.appointment.deleteMany({ where: { id, salonId } });
+      return true;
+    });
+
+    if (!result) {
       return NextResponse.json({ error: t.apiErrors.notFound }, { status: 404 });
     }
+
+    revalidatePath("/dashboard");
+    revalidatePath("/appointments");
+    revalidatePath("/mobile/appointments");
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error(err);
-    const t = await getTranslations();
     return NextResponse.json({ error: t.apiErrors.deleteFailed }, { status: 500 });
   }
 }

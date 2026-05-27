@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useLang } from "@/components/providers/language-provider";
 import { LanguageToggle } from "@/components/layout/language-toggle";
+import { Avatar } from "@/components/ui/avatar";
 
 type SidebarProps = {
   isOpen: boolean;
@@ -194,21 +195,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </button>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-            <div style={{
-              width: 28,
-              height: 28,
-              borderRadius: "50%",
-              background: "var(--primary-light)",
-              color: "var(--primary)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 12,
-              fontWeight: 600,
-              flexShrink: 0
-            }}>
-              {adminName ? adminName.charAt(0).toUpperCase() : "A"}
-            </div>
+            <Avatar name={adminName || "Admin"} size={28} fontSize={12} />
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{
                 fontSize: 12.5,

@@ -19,6 +19,8 @@ model Salon {
   createdAt    DateTime      @default(now())
   name         String
   currency     String        @default("TRY")
+  openingHour  String        @default("09:00")
+  closingHour  String        @default("18:00")
 
   admins       Admin[]
   customers    Customer[]
@@ -73,8 +75,12 @@ model Service {
 
 model Staff {
   id           String        @id @default(cuid())
+  createdAt    DateTime      @default(now())
   name         String
   role         String        @default("Technician")
+  notes        String?
+  email        String?
+  phone        String?
 
   salonId      String
   salon        Salon         @relation(fields: [salonId], references: [id])
@@ -139,4 +145,5 @@ model Appointment {
 
   notes          String?
   status         String      @default("SCHEDULED") // SCHEDULED | CANCELLED | COMPLETED
+  paymentMethod  String?     // CASH | CARD
 }

@@ -22,13 +22,14 @@
 
 # misc
 .DS_Store
-*.pem
+Thumbs.db
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -41,10 +42,49 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Generated Prisma client (re-generated on install)
 /app/generated/prisma
 
 # Database backups and dumps
+*.sql.bak
+*.dump
+*.backup
 backup.sql
+dump.sql
+
+# Private keys & certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.cert
+*.crt
+*.cer
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.jks
+
+# Package manager credentials
+.npmrc
+.yarnrc
+.netrc
+
+# Editor directories and files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+*~
+
+# OS artifacts
+ehthumbs.db
+Desktop.ini
 
 # Neon CLI configuration
 .neon

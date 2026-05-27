@@ -26,10 +26,16 @@ export async function POST(req: NextRequest) {
   const { salonId } = auth.session;
   const t = await getTranslations();
   try {
-    const { name, role } = await req.json();
+    const { name, role, email, phone } = await req.json();
     if (!name) return NextResponse.json({ error: t.apiErrors.nameRequired }, { status: 400 });
     const member = await prisma.staff.create({
-      data: { name, role: role || "Technician", salonId },
+      data: {
+        name,
+        role: role || "Technician",
+        email: email || null,
+        phone: phone || null,
+        salonId,
+      },
     });
     return NextResponse.json(member, { status: 201 });
   } catch (err) {

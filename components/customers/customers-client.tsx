@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { User, Phone, Calendar, Package, Search, X, Plus } from "lucide-react";
 import { useLang } from "@/components/providers/language-provider";
+import { Avatar } from "@/components/ui/avatar";
 
 type Customer = {
   id: string;
@@ -430,15 +431,7 @@ export function CustomersClient({ customers: initialCustomers }: { customers: Cu
                 }}>
                   {/* Left: avatar + name + phone */}
                   <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                    <div style={{
-                      width: 42, height: 42, borderRadius: "50%",
-                      background: "var(--primary-light)",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 16, fontWeight: 600, color: "var(--primary)",
-                      flexShrink: 0,
-                    }}>
-                      {c.name.charAt(0).toUpperCase()}
-                    </div>
+                    <Avatar name={c.name} size={42} />
                     <div>
                       <div style={{ fontWeight: 500, fontSize: 14.5 }}>
                         <HighlightMatch text={c.name} query={query} />

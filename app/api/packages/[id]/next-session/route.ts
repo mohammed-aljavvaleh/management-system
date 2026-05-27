@@ -154,7 +154,7 @@ export async function POST(
           staffId,
           salonId,
           status: "SCHEDULED",
-          priceAtBooking: paidNow,
+          priceAtBooking: Math.round((pkg.totalPrice / pkg.totalSessions) * 100) / 100,
           userPackageId: packageId,
         },
         include: { service: true, staff: true, customer: true, userPackage: true },
