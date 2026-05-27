@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { TrendingUp, CalendarDays, CheckCircle, BarChart2, TurkishLira, Target, SaudiRiyal } from "lucide-react";
 import { useLang, CurrencySymbol, Price } from "@/components/providers/language-provider";
 import { Chart, registerables } from "chart.js";
+import { Avatar } from "@/components/ui/avatar";
 
 Chart.register(...registerables);
 
@@ -31,6 +32,8 @@ type Props = {
   // Goal and Heatmap
   currentMonthRevenue: number;
   heatmapData: number[][];
+  cashCount: number;
+  cardCount: number;
 };
 
 const SERVICE_COLORS = ["#c9956b", "#7b9ec9", "#9ec97b", "#c97bb5", "#c9b56b", "#7bc9c9"];
@@ -323,6 +326,8 @@ export function ReportsClient({
   prevCompletedCount,
   currentMonthRevenue,
   heatmapData,
+  cashCount,
+  cardCount,
 }: Props) {
   const { t, lang, currency } = useLang();
   const router = useRouter();
@@ -365,6 +370,8 @@ export function ReportsClient({
   const prevCompletionRate = (prevCompletedCount + prevCancelledCount) > 0
     ? Math.round((prevCompletedCount / (prevCompletedCount + prevCancelledCount)) * 100)
     : 0;
+
+  const unspecifiedCount = Math.max(completedCount - cashCount - cardCount, 0);
 
   // Days Count Calculation for Staff Slots
   const start = new Date(startDate);
@@ -508,7 +515,15 @@ export function ReportsClient({
     {
       label: t.reports.completionRate,
       value: `${completionRate}%`,
-      sub: `${completedCount} ${t.appointments.statuses.completed}`,
+      sub: (
+        <span>
+          <span>{completedCount} {t.appointments.statuses.completed}</span>
+          <span style={{ display: "block", marginTop: 2, opacity: 0.85 }}>
+            {t.appointments.cash}: {cashCount} · {t.appointments.card}: {cardCount}
+            {unspecifiedCount > 0 && ` · ${t.appointments.unspecified}: ${unspecifiedCount}`}
+          </span>
+        </span>
+      ),
       icon: CheckCircle,
       color: "#c97bb5",
       trend: renderTrend(completionRate, prevCompletionRate, true),
@@ -875,16 +890,7 @@ export function ReportsClient({
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, gap: 12 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                        <div style={{
-                          width: 26, height: 26, borderRadius: "50%",
-                          background: "rgba(212, 136, 74, 0.1)",
-                          color: "#d4884a",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 12, fontWeight: 600,
-                          flexShrink: 0
-                        }}>
-                          {s.name.charAt(0)}
-                        </div>
+                        <Avatar name={s.name} size={26} />
                         <span style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{s.name}</span>
                         {i === 0 && <span style={{ fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>#1</span>}
                       </div>

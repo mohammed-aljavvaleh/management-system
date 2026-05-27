@@ -8,6 +8,7 @@ import { useLang, Price } from "@/components/providers/language-provider";
 import { ar } from "date-fns/locale/ar";
 import { tr } from "date-fns/locale/tr";
 import { enUS } from "date-fns/locale/en-US";
+import { Avatar } from "@/components/ui/avatar";
 
 type Appointment = {
   id: string;
@@ -37,14 +38,27 @@ export function DashboardClient({
   const { t, lang, currency, mounted } = useLang();
   const [adminName, setAdminName] = useState<string | null>(null);
 
+  // Salon working hours configuration state
+  const [salon, setSalon] = useState<{ id: string; name: string; currency: string; openingHour: string; closingHour: string } | null>(null);
+  const [openingHour, setOpeningHour] = useState("09:00");
+  const [closingHour, setClosingHour] = useState("18:00");
+  const [updating, setUpdating] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
   useEffect(() => {
     let active = true;
 
     fetch("/api/auth/me")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!active || !data?.username) return;
-        setAdminName(capitalize(data.username));
+        if (!active) return;
+        if (data?.username) setAdminName(capitalize(data.username));
+        if (data?.salon) {
+          setSalon(data.salon);
+          setOpeningHour(data.salon.openingHour || "09:00");
+          setClosingHour(data.salon.closingHour || "18:00");
+        }
       })
       .catch(() => {
         // ignore
@@ -54,6 +68,35 @@ export function DashboardClient({
       active = false;
     };
   }, []);
+
+  async function handleSaveSettings() {
+    if (openingHour >= closingHour) {
+      setSaveError(t.dashboard.errorOpeningBeforeClosing);
+      return;
+    }
+
+    setUpdating(true);
+    setSaveError("");
+    setSaveSuccess(false);
+
+    try {
+      const res = await fetch("/api/salon", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ openingHour, closingHour }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save settings");
+      }
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err: any) {
+      setSaveError(err.message || "Failed to save settings");
+    } finally {
+      setUpdating(false);
+    }
+  }
 
   function capitalize(text: string) {
     if (!text) return text;
@@ -116,38 +159,152 @@ export function DashboardClient({
       </div>
 
       {/* Stats */}
-      <div className="admin-stats" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
+      <div className="admin-stats">
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="animate-fade-in"
-            style={{
-              background: "var(--card)",
-              border: "1px solid var(--border)",
-              borderRadius: 12,
-              padding: "20px 22px",
-            }}
+            className="animate-fade-in admin-stat-card"
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: stat.color + "18",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
+              <div 
+                className="admin-stat-icon-box"
+                style={{ background: stat.color + "18" }}
+              >
                 <stat.icon size={18} color={stat.color} />
               </div>
               <TrendingUp size={14} color="var(--muted-foreground)" />
             </div>
-            <div style={{ fontSize: 26, fontFamily: "var(--font-display)", fontWeight: 600 }}>
+            <div className="admin-stat-value">
               {stat.value}
             </div>
-            <div style={{ fontSize: 12.5, color: "var(--muted-foreground)", marginTop: 2 }}>
+            <div className="admin-stat-label">
               {stat.label}
             </div>
-            <div style={{ fontSize: 11, color: stat.color, marginTop: 4 }}>{stat.sub}</div>
+            <div className="admin-stat-sub" style={{ color: stat.color }}>
+              {stat.sub}
+            </div>
           </div>
         ))}
       </div>
+
+
+      {/* Working Hours Settings Card */}
+      {salon && (
+        <div 
+          className="animate-fade-in"
+          style={{ 
+            marginBottom: 28, 
+            background: "var(--card)", 
+            border: "1px solid var(--border)", 
+            borderRadius: 12, 
+            padding: "20px 24px"
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ 
+              width: 32, height: 32, borderRadius: 8, 
+              background: "rgba(212, 136, 74, 0.1)", 
+              display: "flex", alignItems: "center", justifyContent: "center" 
+            }}>
+              <Clock size={16} color="#d4884a" />
+            </div>
+            <div>
+              <h2 style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 500, margin: 0 }}>
+                {t.dashboard.workingHours}
+              </h2>
+            </div>
+          </div>
+
+
+          <div style={{ 
+            display: "flex", 
+            gap: 16, 
+            marginTop: 20, 
+            alignItems: "flex-end", 
+            flexWrap: "wrap" 
+          }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--muted-foreground)" }}>
+                {t.dashboard.openingHour}
+              </label>
+              <select
+                value={openingHour}
+                onChange={(e) => setOpeningHour(e.target.value)}
+                style={selectStyle}
+              >
+                {HOUR_OPTIONS.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--muted-foreground)" }}>
+                {t.dashboard.closingHour}
+              </label>
+              <select
+                value={closingHour}
+                onChange={(e) => setClosingHour(e.target.value)}
+                style={selectStyle}
+              >
+                {HOUR_OPTIONS.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={handleSaveSettings}
+              disabled={updating}
+              style={{
+                padding: "9px 20px",
+                background: saveSuccess ? "#2d7a2d" : "var(--primary)",
+                color: "white",
+                border: "none",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: updating ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                transition: "all 0.2s ease",
+                height: 38,
+                boxSizing: "border-box"
+              }}
+            >
+              {updating ? (
+                <>
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
+                  <span>{t.dashboard.savingSettings}</span>
+                </>
+              ) : saveSuccess ? (
+                <span>{t.dashboard.settingsSaved}</span>
+              ) : (
+                <span>{t.dashboard.saveSettings}</span>
+              )}
+            </button>
+          </div>
+
+          {saveError && (
+            <div style={{ 
+              marginTop: 12, 
+              padding: "8px 12px", 
+              background: "#fde8e8", 
+              borderRadius: 6, 
+              color: "#a01a1a", 
+              fontSize: 12.5,
+              display: "inline-block"
+            }}>
+              {saveError}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Status row */}
       <div className="admin-status-row" style={{ display: "flex", gap: 12, marginBottom: 28 }}>
@@ -217,14 +374,7 @@ export function DashboardClient({
                 </div>
                 </div>
 
-                <div style={{
-                  width: 36, height: 36, borderRadius: "50%",
-                  background: "var(--primary-light)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 14, fontWeight: 600, color: "var(--primary)", flexShrink: 0,
-                }}>
-                  {appt.customer.name.charAt(0).toUpperCase()}
-                </div>
+                <Avatar name={appt.customer.name} size={36} />
 
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 500, fontSize: 13.5, marginBottom: 2 }}>
@@ -256,9 +406,29 @@ export function DashboardClient({
           </div>
         )}
       </div>
+
     </div>
   );
 }
+
+const HOUR_OPTIONS = Array.from({ length: 48 }).map((_, i) => {
+  const h = String(Math.floor(i / 2)).padStart(2, "0");
+  const m = i % 2 === 0 ? "00" : "30";
+  return `${h}:${m}`;
+});
+
+const selectStyle: React.CSSProperties = {
+  padding: "8px 12px",
+  border: "1px solid var(--border)",
+  borderRadius: 8,
+  background: "var(--background)",
+  fontSize: 13.5,
+  color: "var(--foreground)",
+  outline: "none",
+  minWidth: 100,
+  height: 38,
+  boxSizing: "border-box"
+};
 
 function getGreeting(t: ReturnType<typeof useLang>["t"]) {
   const h = new Date().getHours();

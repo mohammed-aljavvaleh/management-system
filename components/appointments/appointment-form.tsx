@@ -67,12 +67,50 @@ export function AppointmentForm({ services, staff }: Props) {
   const [serviceId, setServiceId] = useState(services[0]?.id || "");
   const [staffId, setStaffId] = useState(staff[0]?.id || "");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [time, setTime] = useState("10:00");
+  const [time, setTime] = useState("");
   const [sessions, setSessions] = useState(1);
   const [priceOverride, setPriceOverride] = useState<string>("");
   const [installmentAmount, setInstallmentAmount] = useState<string>("");
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [fetchingSlots, setFetchingSlots] = useState(false);
 
   const selectedService = services.find((s) => s.id === serviceId);
+
+  // Fetch available slots dynamically when staff, date, or service changes
+  useEffect(() => {
+    if (!staffId || !date || !selectedService) return;
+    const duration = selectedService.duration;
+
+    let active = true;
+    async function fetchAvailability() {
+      setFetchingSlots(true);
+      try {
+        const res = await fetch(
+          `/api/staff/${staffId}/availability?date=${date}&duration=${duration}`
+        );
+        if (res.ok && active) {
+          const data = await res.json();
+          const slots = data.slots || [];
+          setAvailableSlots(slots);
+
+          // Clear selected time if it's no longer available on the new date/staff/service
+          if (time && !slots.includes(time)) {
+            setTime("");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch staff availability:", err);
+      } finally {
+        if (active) setFetchingSlots(false);
+      }
+    }
+
+    fetchAvailability();
+
+    return () => {
+      active = false;
+    };
+  }, [staffId, date, serviceId, selectedService]);
 
   function selectService(id: string) {
     setServiceId(id);
@@ -188,6 +226,7 @@ export function AppointmentForm({ services, staff }: Props) {
     if (!resolvedCustomerId) { setError(t.appointmentForm.errors.customerRequired); return; }
     if (!serviceId) { setError(t.appointmentForm.errors.serviceRequired); return; }
     if (!staffId) { setError(t.appointmentForm.errors.staffRequired); return; }
+    if (!time) { setError(t.appointmentForm.errors.timeRequired ?? "Please select a time slot"); return; }
 
     setLoading(true);
     try {
@@ -238,7 +277,7 @@ export function AppointmentForm({ services, staff }: Props) {
           href="/appointments"
           style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--muted-foreground)", fontSize: 13, textDecoration: "none", marginBottom: 16 }}
         >
-          <ArrowLeft size={14} /> {t.appointmentForm.back}
+          {t.appointmentForm.back}
         </Link>
         <h1 style={{ fontFamily: "var(--font-display)", fontSize: 30, fontWeight: 500 }}>
           {t.appointmentForm.title}
@@ -361,7 +400,7 @@ export function AppointmentForm({ services, staff }: Props) {
                   <input
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    placeholder= {t.appointmentForm.fullNamePlaceholder}
+                    placeholder={t.appointmentForm.fullNamePlaceholder}
                     style={inputStyle}
                   />
                 </div>
@@ -603,7 +642,7 @@ export function AppointmentForm({ services, staff }: Props) {
               </div>
 
               {/* Date & Time */}
-              <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div style={{ display: "grid", gap: 14 }}>
                 <div>
                   <label style={labelStyle}>{t.appointmentForm.date}</label>
                   <input
@@ -617,11 +656,46 @@ export function AppointmentForm({ services, staff }: Props) {
                 </div>
                 <div>
                   <label style={labelStyle}>{t.appointmentForm.timeSlot}</label>
-                  <select value={time} onChange={(e) => setTime(e.target.value)} style={inputStyle}>
-                    {TIME_SLOTS.map((slot) => (
-                      <option key={slot} value={slot}>{formatTime(slot)}</option>
-                    ))}
-                  </select>
+                  <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: -2, marginBottom: 8, lineHeight: 1.4 }}>
+                    {t.appointmentForm.availableSlotsExplanation}
+                  </p>
+                  {fetchingSlots ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 0" }}>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                      <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{t.common.searching ?? "Loading available slots..."}</span>
+                    </div>
+                  ) : availableSlots.length === 0 ? (
+                    <div style={{ padding: "12px 14px", border: "1.5px dashed var(--border)", borderRadius: 8, background: "var(--muted)", color: "#c45c5c", fontSize: 13 }}>
+                      {t.appointmentForm.errors.noAvailableSlots}
+                    </div>
+                  ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(75px, 1fr))", gap: 8, marginTop: 4 }}>
+                      {availableSlots.map((slot) => {
+                        const isSelected = time === slot;
+                        return (
+                          <button
+                            key={slot}
+                            type="button"
+                            onClick={() => setTime(slot)}
+                            style={{
+                              padding: "8px 0",
+                              textAlign: "center",
+                              border: `1.5px solid ${isSelected ? "var(--primary)" : "var(--border)"}`,
+                              borderRadius: 8,
+                              background: isSelected ? "var(--primary-light)" : "var(--background)",
+                              color: isSelected ? "var(--primary)" : "var(--foreground)",
+                              fontWeight: isSelected ? 600 : 400,
+                              cursor: "pointer",
+                              fontSize: 13,
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            {slot}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -640,9 +714,12 @@ export function AppointmentForm({ services, staff }: Props) {
               justifyContent: "space-between",
               alignItems: "center",
             }}>
-              <span>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                 <strong>{selectedService.name}</strong>
-                {isPackage ? ` · ${sessions} ${t.appointmentForm.packages}` : ` · ${selectedService.duration} ${t.services.min}`}
+                <span style={{ color: "var(--primary)", opacity: 0.5 }}>·</span>
+                <span>
+                  {isPackage ? `${sessions} ${t.appointmentForm.packages}` : `${selectedService.duration} ${t.services.min}`}
+                </span>
                 {date && time && (() => {
                   const d = new Date(`${date}T${time}:00`);
                   const monthKeys = [
@@ -650,9 +727,16 @@ export function AppointmentForm({ services, staff }: Props) {
                     "july", "august", "september", "october", "november", "december"
                   ] as const;
                   const monthName = t.months[monthKeys[d.getMonth()]];
-                  return ` · ${d.getDate()} ${monthName} ${t.appointmentForm.at} ${formatTime(time)}`;
+                  return (
+                    <>
+                      <span style={{ color: "var(--primary)", opacity: 0.5 }}>·</span>
+                      <span>{d.getDate()} {monthName}</span>
+                      <span>{t.appointmentForm.at}</span>
+                      <span style={{ direction: "ltr", display: "inline-block" }}>{formatTime(time)}</span>
+                    </>
+                  );
                 })()}
-              </span>
+              </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontWeight: 600, fontSize: 16 }}><Price amount={totalPrice} size={16} /></div>
                 {isPackage && installmentAmount !== "" && (

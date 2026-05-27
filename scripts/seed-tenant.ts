@@ -43,12 +43,12 @@ const serviceSeeds: Array<{ key: ServiceKey; name: string; price: number; durati
   { key: "browsLashes", name: "حواجب ورموش", price: 220, duration: 55 },
 ];
 
-const staffSeeds: Array<{ key: StaffKey; name: string; role: string }> = [
-  { key: "owner", name: "نورا السالم", role: "مديرة الصالون" },
-  { key: "laser", name: "ريم الحربي", role: "أخصائية ليزر" },
-  { key: "nails", name: "لينا العتيبي", role: "خبيرة أظافر" },
-  { key: "skin", name: "هبة الأنصاري", role: "أخصائية بشرة" },
-  { key: "reception", name: "جود القحطاني", role: "استقبال ومتابعة" },
+const staffSeeds: Array<{ key: StaffKey; name: string; role: string; phone?: string; email?: string; notes?: string }> = [
+  { key: "owner", name: "نورا السالم", role: "مديرة الصالون", phone: "05500000001", email: "noora@noorsalon.com", notes: "المالكة والمديرة العامة للصالون." },
+  { key: "laser", name: "ريم الحربي", role: "أخصائية ليزر", phone: "05500000002", email: "reem@noorsalon.com", notes: "خبرة ٥ سنوات في أجهزة الديكا والجنتل ليزر." },
+  { key: "nails", name: "لينا العتيبي", role: "خبيرة أظافر", phone: "05500000003", email: "lina@noorsalon.com", notes: "متخصصة في رسم الأظافر وتركيب الأكريليك والجل." },
+  { key: "skin", name: "هبة الأنصاري", role: "أخصائية بشرة", phone: "05500000004", email: "heba@noorsalon.com", notes: "حاصلة على شهادة الـ CIDESCO للعناية بالبشرة." },
+  { key: "reception", name: "جود القحطاني", role: "استقبال ومتابعة", phone: "05500000005", email: "joud@noorsalon.com", notes: "مسؤولة عن تنسيق المواعيد وخدمة العملاء." },
 ];
 
 const customerSeeds = [
@@ -144,6 +144,9 @@ async function main() {
             name: member.name,
             role: member.role,
             salonId: salon.id,
+            phone: member.phone || null,
+            email: member.email || null,
+            notes: member.notes || null,
           },
         });
         return [member.key, created] as const;
@@ -248,10 +251,10 @@ async function main() {
     { customerIndex: 2, serviceKey: "browsLashes", staffKey: "skin", dayOffset: -18, hour: 16, status: "COMPLETED", price: 220, packageId: browsPackage.id, notes: "تنظيف وترتيب خفيف." },
     { customerIndex: 2, serviceKey: "browsLashes", staffKey: "skin", dayOffset: -10, hour: 17, status: "COMPLETED", price: 220, packageId: browsPackage.id, notes: "تثبيت رموش طبيعي." },
     { customerIndex: 2, serviceKey: "browsLashes", staffKey: "skin", dayOffset: -2, hour: 18, status: "COMPLETED", price: 220, packageId: browsPackage.id, notes: "الباقة مكتملة." },
-    { customerIndex: 10, serviceKey: "facial", staffKey: "skin", dayOffset: -3, hour: 10, status: "COMPLETED", price: 350, packageId: facialPackage.id, notes: "جلسة تنظيف عميق أولى." },
-    { customerIndex: 0, serviceKey: "laserFullBody", staffKey: "laser", dayOffset: 8, hour: 11, status: "SCHEDULED", price: 0, packageId: laserPackage.id, notes: "جلسة قادمة ضمن الباقة." },
-    { customerIndex: 1, serviceKey: "classicManicure", staffKey: "nails", dayOffset: 5, hour: 16, status: "SCHEDULED", price: 0, packageId: manicurePackage.id, notes: "الجلسة الأخيرة، يلزم تسوية الرصيد." },
-    { customerIndex: 10, serviceKey: "facial", staffKey: "skin", dayOffset: 9, hour: 13, status: "SCHEDULED", price: 0, packageId: facialPackage.id, notes: "الجلسة الثانية من باقة البشرة." },
+    { customerIndex: 10, serviceKey: "facial", staffKey: "skin", dayOffset: -3, hour: 10, status: "COMPLETED", price: 300, packageId: facialPackage.id, notes: "جلسة تنظيف عميق أولى." },
+    { customerIndex: 0, serviceKey: "laserFullBody", staffKey: "laser", dayOffset: 8, hour: 11, status: "SCHEDULED", price: 800, packageId: laserPackage.id, notes: "جلسة قادمة ضمن الباقة." },
+    { customerIndex: 1, serviceKey: "classicManicure", staffKey: "nails", dayOffset: 5, hour: 16, status: "SCHEDULED", price: 160, packageId: manicurePackage.id, notes: "الجلسة الأخيرة، يلزم تسوية الرصيد." },
+    { customerIndex: 10, serviceKey: "facial", staffKey: "skin", dayOffset: 9, hour: 13, status: "SCHEDULED", price: 300, packageId: facialPackage.id, notes: "الجلسة الثانية من باقة البشرة." },
     { customerIndex: 3, serviceKey: "gelExtensions", staffKey: "nails", dayOffset: -1, hour: 10, status: "COMPLETED", notes: "تصميم فرنسي ناعم." },
     { customerIndex: 4, serviceKey: "pedicureDeluxe", staffKey: "nails", dayOffset: 0, hour: 9, status: "COMPLETED", notes: "موعد صباحي للعرض في لوحة التحكم." },
     { customerIndex: 5, serviceKey: "facial", staffKey: "skin", dayOffset: 0, hour: 11, status: "SCHEDULED", notes: "تأكيد قبل الموعد بساعتين." },
@@ -262,41 +265,73 @@ async function main() {
     { customerIndex: 11, serviceKey: "laserFullBody", staffKey: "laser", dayOffset: 3, hour: 12, status: "SCHEDULED", notes: "تجربة أولى لخدمة الليزر." },
   ];
 
-  const generatedOffsets = [-27, -26, -23, -21, -19, -17, -14, -13, -11, -9, -8, -7, -5, -4, -3, -2, -1];
-  generatedOffsets.forEach((offset, index) => {
-    const serviceKey = serviceSeeds[index % serviceSeeds.length].key;
-    const status = index % 5 === 0 ? "CANCELLED" : "COMPLETED";
+  // Generate 120 versatile appointments dynamically
+  const arabicNotes = [
+    "جلسة اعتيادية مع التركيز على الترطيب.",
+    "تفضل عميلة الألوان الهادئة.",
+    "متابعة دورية ممتازة.",
+    "تحب استخدام المواد الخالية من المعطرات.",
+    "موعد سريع ومنظم.",
+    "ملاحظة: تفضل فنجان قهوة عند الوصول.",
+    "حجزت عن طريق تطبيق الهاتف.",
+    "تحتاج تذكير بالرسائل النصية.",
+    "أبدت رضاها الكبير عن الخدمة السابقة.",
+    "تفضل أخصائية معينة دائماً."
+  ];
+
+  const arabicCancellationNotes = [
+    "اعتذرت العميلة بسبب ظرف عائلي مفاجئ.",
+    "تم الإلغاء لعدم إمكانية الحضور وتأجيل الموعد.",
+    "العميلة خارج المدينة حالياً.",
+    "تغيير خطط السفر.",
+    "إلغاء بسبب طارئ صحي بسيط."
+  ];
+
+  for (let i = 0; i < 120; i++) {
+    let dayOffset = 0;
+    let status: "COMPLETED" | "CANCELLED" | "SCHEDULED" = "SCHEDULED";
+
+    if (i < 95) {
+      dayOffset = -45 + (i % 45);
+      status = (i % 10 === 0) ? "CANCELLED" : "COMPLETED";
+    } else {
+      dayOffset = 1 + (i % 15);
+      status = "SCHEDULED";
+    }
+
+    const serviceSeedsKeys = serviceSeeds.map(s => s.key);
+    const serviceKey = serviceSeedsKeys[i % serviceSeedsKeys.length];
+
+    const staffSeedsKeys = staffSeeds.map(s => s.key);
+    const staffKey = staffSeedsKeys[(i + 2) % staffSeedsKeys.length];
+
+    const hour = 9 + (i % 11);
+    const minute = (i % 3 === 0) ? 30 : 0;
+
+    const notes = status === "CANCELLED"
+      ? arabicCancellationNotes[i % arabicCancellationNotes.length]
+      : arabicNotes[i % arabicNotes.length];
+
     appointments.push({
-      customerIndex: (index + 3) % customers.length,
+      customerIndex: i % customers.length,
       serviceKey,
-      staffKey: index % 3 === 0 ? "nails" : index % 3 === 1 ? "skin" : "laser",
-      dayOffset: offset,
-      hour: 9 + (index % 9),
-      minute: index % 2 === 0 ? 0 : 30,
+      staffKey,
+      dayOffset,
+      hour,
+      minute,
       status,
-      notes: status === "CANCELLED" ? "تم الإلغاء بعد التواصل مع العميلة." : "زيارة مكتملة ضمن بيانات العرض.",
+      notes,
     });
-  });
+  }
 
-  const futureOffsets = [4, 5, 6, 7, 10, 11, 12, 13];
-  futureOffsets.forEach((offset, index) => {
-    const serviceKey = serviceSeeds[(index + 2) % serviceSeeds.length].key;
-    appointments.push({
-      customerIndex: (index + 4) % customers.length,
-      serviceKey,
-      staffKey: index % 2 === 0 ? "nails" : "skin",
-      dayOffset: offset,
-      hour: 10 + (index % 7),
-      minute: index % 2 === 0 ? 0 : 30,
-      status: "SCHEDULED",
-      notes: "موعد مخطط ضمن جدول الأسبوع القادم.",
-    });
-  });
-
+  let completedIndex = 0;
   await prisma.appointment.createMany({
     data: appointments.map((appointment) => {
       const service = services[appointment.serviceKey];
       const member = staff[appointment.staffKey];
+      const paymentMethod = appointment.status === "COMPLETED"
+        ? (completedIndex++ % 2 === 0 ? "CASH" : "CARD")
+        : null;
       return {
         startTime: appointmentDate(appointment.dayOffset, appointment.hour, appointment.minute ?? 0),
         customerId: customers[appointment.customerIndex].id,
@@ -307,6 +342,7 @@ async function main() {
         userPackageId: appointment.packageId ?? null,
         status: appointment.status,
         notes: appointment.notes ?? null,
+        paymentMethod,
       };
     }),
   });

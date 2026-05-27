@@ -17,7 +17,12 @@ type Appointment = {
   customer: { id: string; name: string; phone: string };
   service: { id: string; name: string; duration: number };
   staff: { id: string; name: string };
-  userPackage?: { id: string; name: string } | null;
+  userPackage?: {
+    id: string;
+    name: string;
+    totalPrice?: number;
+    paidAmount?: number;
+  } | null;
 };
 
 type Service = { id: string; name: string; price: number; duration: number };
@@ -174,6 +179,12 @@ export function MobileAppointmentsClient({ initialAppointments }: Props) {
                         >
                           <Icon className="w-3 h-3" />
                           {cfg?.label}
+                          {a.status === "COMPLETED" && a.userPackage && (
+                            a.userPackage.totalPrice != null &&
+                            a.userPackage.paidAmount != null &&
+                            a.userPackage.paidAmount >= a.userPackage.totalPrice ?
+                              ` (${t.appointments.fullyPaid})` : ` (${t.customers.packageBadge})`
+                          )}
                         </span>
                         <span className="text-xs font-semibold text-zinc-700">
                           <Price amount={a.priceAtBooking} size={12} />

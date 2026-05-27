@@ -165,6 +165,8 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
   const totalRevenue = completedAppointments.reduce((s, a) => s + a.priceAtBooking, 0);
   const cancelledCount = appointments.filter((a) => a.status === "CANCELLED").length;
   const completedCount = completedAppointments.length;
+  const cashCount = completedAppointments.filter((a) => a.paymentMethod === "CASH").length;
+  const cardCount = completedAppointments.filter((a) => a.paymentMethod === "CARD").length;
 
   // Calculations for previous period (for trend arrows)
   const prevCompletedAppointments = prevAppointments.filter((a) => a.status === "COMPLETED");
@@ -226,6 +228,8 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
       // Configurable Goal & Heatmap
       currentMonthRevenue={currentMonthRevenue}
       heatmapData={heatmapData}
+      cashCount={cashCount}
+      cardCount={cardCount}
     />
   );
 }

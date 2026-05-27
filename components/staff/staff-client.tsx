@@ -1,13 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Pencil, Trash2, X, IdCardLanyard, CalendarDays, TurkishLira, SaudiRiyal } from "lucide-react";
+import Link from "next/link";
+import { Plus, Pencil, Trash2, X, IdCardLanyard, CalendarDays, TurkishLira, SaudiRiyal, User, Phone } from "lucide-react";
 import { useLang, Price } from "@/components/providers/language-provider";
+import { Avatar } from "@/components/ui/avatar";
 
 type StaffMember = {
   id: string;
   name: string;
   role: string;
+  email?: string | null;
+  phone?: string | null;
   appointmentCount: number;
   totalRevenue: number;
 };
@@ -33,13 +37,7 @@ const ROLES = [
   "Junior Technician"
 ];
 
-const AVATAR_COLORS = [
-  { bg: "#f5ede5", color: "#c9956b" },
-  { bg: "#e5eff5", color: "#6b9ec9" },
-  { bg: "#e5f5e5", color: "#6bc97b" },
-  { bg: "#f5e5f5", color: "#c96bb5" },
-  { bg: "#f5f5e5", color: "#c9b56b" },
-];
+
 
 export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
   const { t, currency } = useLang();
@@ -51,11 +49,44 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
 
   const [name, setName] = useState("");
   const [role, setRole] = useState("Technician");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+
+  function handlePhoneChange(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    setPhone(digits);
+    if (digits.length === 0) {
+      setPhoneError("");
+      return;
+    }
+    if (!digits.startsWith("05")) {
+      setPhoneError(t.appointmentForm.errors.phoneMustStart);
+      return;
+    }
+    setPhoneError("");
+  }
+
+  function validatePhone(): boolean {
+    if (phone.length === 0) return true;
+    if (!phone.startsWith("05")) {
+      setPhoneError(t.appointmentForm.errors.phoneMustStart);
+      return false;
+    }
+    if (phone.length !== 11) {
+      setPhoneError(t.appointmentForm.errors.PhoneTooShort || "Phone number must be 11 digits");
+      return false;
+    }
+    return true;
+  }
 
   function openCreate() {
     setEditId(null);
     setName("");
     setRole("Technician");
+    setEmail("");
+    setPhone("");
+    setPhoneError("");
     setError("");
     setShowForm(true);
   }
@@ -64,6 +95,9 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
     setEditId(s.id);
     setName(s.name);
     setRole(s.role);
+    setEmail(s.email || "");
+    setPhone(s.phone || "");
+    setPhoneError("");
     setError("");
     setShowForm(true);
   }
@@ -71,12 +105,14 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
   function closeForm() {
     setShowForm(false);
     setEditId(null);
+    setPhoneError("");
     setError("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) { setError(t.apiErrors.nameRequired); return; }
+    if (!validatePhone()) return;
 
     setLoadingId("form");
     setError("");
@@ -86,7 +122,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
         const res = await fetch(`/api/staff/${editId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: name.trim(), role }),
+          body: JSON.stringify({ name: name.trim(), role, email: email.trim() || null, phone: phone.trim() || null }),
         });
         if (!res.ok) throw new Error(t.apiErrors.updateFailed);
         const updated = await res.json();
@@ -97,7 +133,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
         const res = await fetch("/api/staff", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: name.trim(), role }),
+          body: JSON.stringify({ name: name.trim(), role, email: email.trim() || null, phone: phone.trim() || null }),
         });
         if (!res.ok) throw new Error(t.apiErrors.createFailed);
         const created = await res.json();
@@ -180,7 +216,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
       ) : (
         <div className="admin-scroll-x" style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, overflowX: "auto", overflowY: "hidden" }}>
           {/* Table header */}
-          <div className="admin-table" style={{ display: "grid", gridTemplateColumns: "1fr 160px 120px 140px 100px", padding: "10px 20px", borderBottom: "1px solid var(--border)", fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <div className="admin-table" style={{ display: "grid", gridTemplateColumns: "1fr 160px 120px 140px 140px", padding: "10px 20px", borderBottom: "1px solid var(--border)", fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
             <span>{t.staff.name}</span>
             <span>{t.staff.role}</span>
             <span>{t.appointments.appointments}</span>
@@ -189,7 +225,6 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
           </div>
 
           {staff.map((member, i) => {
-            const avatarStyle = AVATAR_COLORS[i % AVATAR_COLORS.length];
             const pct = totalAppointments > 0 ? (member.appointmentCount / totalAppointments) * 100 : 0;
 
             return (
@@ -199,7 +234,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
                 style={{
                   animationDelay: `${i * 40}ms`,
                   display: "grid",
-                  gridTemplateColumns: "1fr 160px 120px 140px 100px",
+                  gridTemplateColumns: "1fr 160px 120px 140px 140px",
                   padding: "14px 20px",
                   borderBottom: i < staff.length - 1 ? "1px solid var(--border)" : "none",
                   alignItems: "center",
@@ -208,14 +243,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
               >
                 {/* Name + avatar */}
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: "50%",
-                    background: avatarStyle.bg, color: avatarStyle.color,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 15, fontWeight: 600, fontFamily: "var(--font-display)", flexShrink: 0,
-                  }}>
-                    {member.name.charAt(0).toUpperCase()}
-                  </div>
+                  <Avatar name={member.name} size={40} />
                   <div>
                     <div style={{ fontWeight: 500, fontSize: 14 }}>{member.name}</div>
                     {topStaff?.id === member.id && member.appointmentCount > 0 && (
@@ -243,11 +271,18 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
                 </div>
 
                 {/* Actions */}
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={() => openEdit(member)} style={iconBtnStyle} title="Edit">
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <Link
+                    href={`/staff/${member.id}`}
+                    style={{ ...iconBtnStyle, color: "var(--primary)", textDecoration: "none" }}
+                    title={t.staff.viewProfile}
+                  >
+                    <User size={13} />
+                  </Link>
+                  <button onClick={() => openEdit(member)} style={iconBtnStyle} title={t.common.edit}>
                     <Pencil size={13} />
                   </button>
-                  <button onClick={() => handleDelete(member.id)} style={{ ...iconBtnStyle, color: "var(--destructive)" }} title="Delete">
+                  <button onClick={() => handleDelete(member.id)} style={{ ...iconBtnStyle, color: "var(--destructive)" }} title={t.common.delete}>
                     <Trash2 size={13} />
                   </button>
                 </div>
@@ -296,6 +331,61 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label style={labelStyle}>{t.staff.email}</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t.staff.emailPlaceholder}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <Phone size={11} /> {t.appointmentForm.phoneNumber}
+                    </span>
+                  </label>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={phone}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                    placeholder="05XXXXXXXXX"
+                    maxLength={11}
+                    style={{
+                      ...inputStyle,
+                      borderColor: (() => {
+                        if (phone.length === 0) return "var(--border)";
+                        if (!phone.startsWith("05")) return "#c45c5c";
+                        if (phone.length === 11) return "#2d7a2d";
+                        return "var(--border)";
+                      })(),
+                    }}
+                  />
+                  <div style={{ marginTop: 5, minHeight: 18, display: "flex", justifyContent: "space-between" }}>
+                    <span style={{
+                      fontSize: 12,
+                      color: (() => {
+                        if (phone.length === 0) return "var(--muted-foreground)";
+                        if (!phone.startsWith("05")) return "#c45c5c";
+                        if (phone.length === 11) return "#2d7a2d";
+                        return "var(--muted-foreground)";
+                      })()
+                    }}>
+                      {(() => {
+                        if (phone.length === 0) return t.appointmentForm.phoneNumberRules;
+                        if (!phone.startsWith("05")) return t.appointmentForm.errors.phoneMustStart;
+                        if (phone.length === 11) return t.appointmentForm.availableNumber;
+                        return t.appointmentForm.phoneNumberRules;
+                      })()}
+                    </span>
+                    <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>
+                      {phone.length}/11
+                    </span>
+                  </div>
+                </div>
 
                 {error && (
                   <div style={{ padding: "10px 14px", background: "#fde8e8", borderRadius: 8, color: "var(--destructive)", fontSize: 13 }}>
@@ -307,7 +397,18 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
                   <button type="button" onClick={closeForm} style={{ ...btnStyle, flex: 1, background: "var(--muted)", color: "var(--foreground)" }}>
                     {t.staff.cancel}
                   </button>
-                  <button type="submit" disabled={loadingId === "form"} style={{ ...btnStyle, flex: 2, background: "var(--primary)", color: "white", opacity: loadingId === "form" ? 0.7 : 1 }}>
+                  <button
+                    type="submit"
+                    disabled={loadingId === "form" || (phone.length > 0 && (phone.length !== 11 || !phone.startsWith("05")))}
+                    style={{
+                      ...btnStyle,
+                      flex: 2,
+                      background: (loadingId === "form" || (phone.length > 0 && (phone.length !== 11 || !phone.startsWith("05")))) ? "var(--muted)" : "var(--primary)",
+                      color: (loadingId === "form" || (phone.length > 0 && (phone.length !== 11 || !phone.startsWith("05")))) ? "var(--muted-foreground)" : "white",
+                      opacity: loadingId === "form" ? 0.7 : 1,
+                      cursor: (loadingId === "form" || (phone.length > 0 && (phone.length !== 11 || !phone.startsWith("05")))) ? "default" : "pointer",
+                    }}
+                  >
                     {loadingId === "form" ? t.staff.saving : editId ? t.staff.save : t.staff.addMember}
                   </button>
                 </div>
