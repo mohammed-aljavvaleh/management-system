@@ -13,14 +13,14 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const { salonId } = session;
+  const { salonId, username } = session;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const [todayAppointments, upcomingCount, services, staff] =
+  const [todayAppointments, upcomingCount, services, staff, salon] =
     await Promise.all([
       prisma.appointment.findMany({
         where: { salonId, startTime: { gte: today, lt: tomorrow } },
@@ -32,6 +32,10 @@ export default async function DashboardPage() {
       }),
       prisma.service.count({ where: { salonId } }),
       prisma.staff.count({ where: { salonId } }),
+      prisma.salon.findUnique({
+        where: { id: salonId },
+        select: { id: true, name: true, currency: true, openingHour: true, closingHour: true },
+      }),
     ]);
 
   const todayRevenue = todayAppointments
@@ -45,6 +49,8 @@ export default async function DashboardPage() {
       upcomingCount={upcomingCount}
       servicesCount={services}
       staffCount={staff}
+      username={username || ""}
+      salon={salon}
     />
   );
 }

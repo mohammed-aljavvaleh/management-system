@@ -26,6 +26,8 @@ type Props = {
   upcomingCount: number;
   servicesCount: number;
   staffCount: number;
+  username: string;
+  salon: { id: string; name: string; currency: string; openingHour: string; closingHour: string } | null;
 };
 
 export function DashboardClient({
@@ -34,40 +36,21 @@ export function DashboardClient({
   upcomingCount,
   servicesCount,
   staffCount,
+  username,
+  salon: initialSalon,
 }: Props) {
   const { t, lang, currency, mounted } = useLang();
-  const [adminName, setAdminName] = useState<string | null>(null);
+  const [adminName] = useState<string | null>(
+    username ? username.charAt(0).toUpperCase() + username.slice(1).toLowerCase() : null
+  );
 
   // Salon working hours configuration state
-  const [salon, setSalon] = useState<{ id: string; name: string; currency: string; openingHour: string; closingHour: string } | null>(null);
-  const [openingHour, setOpeningHour] = useState("09:00");
-  const [closingHour, setClosingHour] = useState("18:00");
+  const [salon, setSalon] = useState(initialSalon);
+  const [openingHour, setOpeningHour] = useState(initialSalon?.openingHour || "09:00");
+  const [closingHour, setClosingHour] = useState(initialSalon?.closingHour || "18:00");
   const [updating, setUpdating] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState("");
-
-  useEffect(() => {
-    let active = true;
-
-    fetch("/api/auth/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!active) return;
-        if (data?.username) setAdminName(capitalize(data.username));
-        if (data?.salon) {
-          setSalon(data.salon);
-          setOpeningHour(data.salon.openingHour || "09:00");
-          setClosingHour(data.salon.closingHour || "18:00");
-        }
-      })
-      .catch(() => {
-        // ignore
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   async function handleSaveSettings() {
     if (openingHour >= closingHour) {
@@ -360,47 +343,46 @@ export function DashboardClient({
             {todayAppointments.map((appt, i) => (
               <div
                 key={appt.id}
-                className="animate-fade-in admin-card-row"
+                className="animate-fade-in dashboard-appt-row"
                 style={{
                   animationDelay: `${i * 40}ms`,
-                  padding: "14px 22px",
                   borderBottom: i < todayAppointments.length - 1 ? "1px solid var(--border)" : "none",
-                  display: "flex", alignItems: "center", gap: 16,
                 }}
               >
-                <div style={{ width: 64, flexShrink: 0 }}>
-                 <div style={{ fontSize: 13.5, fontWeight: 500 }}>
+                <div className="dashboard-appt-time">
                   {format(new Date(appt.startTime), "HH:mm")}
                 </div>
+
+                <div className="dashboard-appt-avatar">
+                  <Avatar name={appt.customer.name} size={36} />
                 </div>
 
-                <Avatar name={appt.customer.name} size={36} />
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 500, fontSize: 13.5, marginBottom: 2 }}>
+                <div className="dashboard-appt-info">
+                  <div className="dashboard-appt-customer">
                     {appt.customer.name}
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+                  <div className="dashboard-appt-meta">
                     {appt.service.name} · {appt.staff.name}
+                    <span className="dashboard-appt-duration-inline"> · {appt.service.duration}{t.services.min}</span>
                   </div>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--muted-foreground)", fontSize: 12 }}>
-                  <Clock size={12} />{appt.service.duration}{t.services.min}
+                <div className="dashboard-appt-duration">
+                  <Clock size={12} />
+                  <span>{appt.service.duration}{t.services.min}</span>
                 </div>
 
-                <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--primary)", width: 60, textAlign: "right" }}>
+                <div className="dashboard-appt-price">
                   <Price amount={appt.priceAtBooking} />
                 </div>
 
-                <span
-                  className={`status-${appt.status.toLowerCase()}`}
-                  style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 500, textTransform: "capitalize" }}
-                >
-                  {appt.status === "SCHEDULED" ? t.appointments.statuses.scheduled
-                  : appt.status === "COMPLETED" ? t.appointments.statuses.completed
-                  : t.appointments.statuses.cancelled}
-                </span>
+                <div className="dashboard-appt-status">
+                  <span className={`status-${appt.status.toLowerCase()}`}>
+                    {appt.status === "SCHEDULED" ? t.appointments.statuses.scheduled
+                    : appt.status === "COMPLETED" ? t.appointments.statuses.completed
+                    : t.appointments.statuses.cancelled}
+                  </span>
+                </div>
               </div>
             ))}
           </div>

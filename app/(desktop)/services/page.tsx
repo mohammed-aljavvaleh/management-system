@@ -7,6 +7,11 @@ export default async function ServicesPage() {
   const { salonId } = await requireSession();
   const services = await prisma.service.findMany({
     where: { salonId },
+    include: {
+      _count: {
+        select: { appointments: true },
+      },
+    },
     orderBy: { name: "asc" },
   });
   return <ServicesClient initialServices={services} />;

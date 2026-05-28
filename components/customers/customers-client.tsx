@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { User, Phone, Calendar, Package, Search, X, Plus } from "lucide-react";
 import { useLang } from "@/components/providers/language-provider";
@@ -31,6 +31,20 @@ function CreateCustomerDialog({
   const [phoneError, setPhoneError] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const mainEl = document.querySelector("main");
+    const originalOverflow = mainEl ? mainEl.style.overflow : "";
+    const originalBodyOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    if (mainEl) mainEl.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      if (mainEl) mainEl.style.overflow = originalOverflow;
+    };
+  }, []);
 
   function handlePhoneChange(value: string) {
     const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -125,6 +139,9 @@ function CreateCustomerDialog({
         zIndex: 1000,
       }}
       onClick={onClose}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
     >
       <div
         style={{
@@ -143,7 +160,7 @@ function CreateCustomerDialog({
 
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 6, color: "var(--muted-foreground)" }}>
-            {t.common.name ?? "Name"}
+            {t.appointmentForm.fullName}
           </label>
           <input
             type="text"
