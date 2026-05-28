@@ -23,6 +23,7 @@ export async function GET(
     const { searchParams } = new URL(req.url);
     const dateParam = searchParams.get("date"); // e.g. "2026-05-27"
     const durationParam = searchParams.get("duration"); // e.g. "35"
+    const offsetParam = searchParams.get("offset");
 
     if (!dateParam || !durationParam) {
       return NextResponse.json(
@@ -39,9 +40,14 @@ export async function GET(
       );
     }
 
-    const dateStart = new Date(`${dateParam}T00:00:00`);
-    const dateEnd = new Date(`${dateParam}T23:59:59`);
-    const queryStart = new Date(dateStart.getTime() - 4 * 60 * 60 * 1000); // 4-hour buffer for spillover
+    const offset = offsetParam ? parseInt(offsetParam, 10) : 0;
+
+    const startUtc = new Date(`${dateParam}T00:00:00Z`).getTime() + offset * 60 * 1000;
+    const endUtc = new Date(`${dateParam}T23:59:59Z`).getTime() + offset * 60 * 1000;
+
+    const dateStart = new Date(startUtc);
+    const dateEnd = new Date(endUtc);
+    const queryStart = new Date(startUtc - 4 * 60 * 60 * 1000); // 4-hour buffer for spillover
 
     const appointments = await prisma.appointment.findMany({
       where: {
@@ -72,7 +78,7 @@ export async function GET(
     const filteredSlots = ALL_TIME_SLOTS.filter((slot) => slot >= opening && slot <= closing);
 
     const availableSlots = filteredSlots.filter((slot) => {
-      const slotStart = new Date(`${dateParam}T${slot}:00`).getTime();
+      const slotStart = new Date(`${dateParam}T${slot}:00Z`).getTime() + offset * 60 * 1000;
       const slotEnd = slotStart + duration * 60 * 1000;
 
       const hasOverlap = bookedRanges.some((range) => {
