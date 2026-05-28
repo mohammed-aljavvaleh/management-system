@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Prisma } from "@/app/generated/prisma";
 import {
@@ -189,21 +189,21 @@ export function StaffProfileClient({
         {/* Stats row */}
         <div className="admin-card-row-right" style={{ display: "flex", gap: 28, textAlign: "center", flexShrink: 0 }}>
           <div>
-            <div style={{ fontSize: 24, fontWeight: 700 }}>{stats.total}</div>
+            <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "var(--font-display)" }}>{stats.total}</div>
             <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginTop: 2 }}>{t.appointments.appointments}</div>
           </div>
           <div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: "#2d7a2d" }}>{stats.completed}</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: "#2d7a2d", fontFamily: "var(--font-display)" }}>{stats.completed}</div>
             <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginTop: 2 }}>{t.appointments.statuses.completed}</div>
           </div>
           <div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: "var(--primary)" }}>
+            <div style={{ fontSize: 24, fontWeight: 700, color: "var(--primary)", fontFamily: "var(--font-display)" }}>
               {stats.completionRate}%
             </div>
             <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginTop: 2 }}>{t.staff.completionRate}</div>
           </div>
           <div>
-            <Price amount={stats.revenue} showDecimals={false} size={24} style={{ fontWeight: 700, color: "var(--primary)" }} />
+            <Price amount={stats.revenue} showDecimals={false} size={24} style={{ fontWeight: 700, color: "var(--primary)", fontFamily: "var(--font-display)" }} />
             <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginTop: 2 }}>{t.staff.revenueGenerated}</div>
           </div>
         </div>
@@ -740,25 +740,77 @@ function StaffContactCard({
   const [draftEmail, setDraftEmail] = useState(email);
   const [draftPhone, setDraftPhone] = useState(phone);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const [staffList, setStaffList] = useState<{ id: string; phone?: string | null }[]>([]);
+
+  useEffect(() => {
+    async function fetchStaff() {
+      try {
+        const res = await fetch("/api/staff");
+        if (res.ok) {
+          const data = await res.json();
+          setStaffList(data);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    if (editing) {
+      fetchStaff();
+    }
+  }, [editing]);
 
   function handlePhoneChange(value: string) {
     const digits = value.replace(/\D/g, "").slice(0, 11);
     setDraftPhone(digits);
+    if (digits.length === 0) {
+      setPhoneError("");
+      return;
+    }
+    if (!digits.startsWith("05")) {
+      setPhoneError(t.appointmentForm.errors.phoneMustStart);
+      return;
+    }
+    if (digits.length < 11) {
+      setPhoneError("");
+    } else {
+      const isExactMatch = staffList.some((s) => s.phone === digits && s.id !== staffId);
+      if (isExactMatch) {
+        setPhoneError(t.common.phoneExists ?? "Phone number is already registered");
+      } else {
+        setPhoneError("");
+      }
+    }
+  }
+
+  function openEdit() {
+    setDraftEmail(email);
+    setDraftPhone(phone);
+    setError("");
+    setPhoneError("");
+    setEditing(true);
   }
 
   async function save() {
     setSaving(true);
+    setError("");
     try {
       const res = await fetch(`/api/staff/${staffId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: draftEmail.trim() || null, phone: draftPhone.trim() || null }),
       });
+      const data = await res.json();
       if (res.ok) {
         setEmail(draftEmail.trim());
         setPhone(draftPhone.trim());
         setEditing(false);
+      } else {
+        setError(data.error || t.apiErrors.failed);
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.common.error);
     } finally {
       setSaving(false);
     }
@@ -781,7 +833,7 @@ function StaffContactCard({
         </h3>
         {!editing && (
           <button
-            onClick={() => { setDraftEmail(email); setDraftPhone(phone); setEditing(true); }}
+            onClick={openEdit}
             style={iconBtnStyle}
             title={t.common.edit}
           >
@@ -832,7 +884,7 @@ function StaffContactCard({
                 borderColor: (() => {
                   if (draftPhone.length === 0) return "var(--border)";
                   if (!draftPhone.startsWith("05")) return "#c45c5c";
-                  if (draftPhone.length === 11) return "#2d7a2d";
+                  if (draftPhone.length === 11) return phoneError ? "#c45c5c" : "#2d7a2d";
                   return "var(--border)";
                 })(),
               }}
@@ -843,7 +895,7 @@ function StaffContactCard({
                 color: (() => {
                   if (draftPhone.length === 0) return "var(--muted-foreground)";
                   if (!draftPhone.startsWith("05")) return "#c45c5c";
-                  if (draftPhone.length === 11) return "#2d7a2d";
+                  if (draftPhone.length === 11) return phoneError ? "#c45c5c" : "#2d7a2d";
                   return "var(--muted-foreground)";
                 })(),
                 textAlign: lang === "ar" ? "right" : "left",
@@ -852,7 +904,7 @@ function StaffContactCard({
                 {(() => {
                   if (draftPhone.length === 0) return t.appointmentForm.phoneNumberRules;
                   if (!draftPhone.startsWith("05")) return t.appointmentForm.errors.phoneMustStart;
-                  if (draftPhone.length === 11) return t.appointmentForm.availableNumber;
+                  if (draftPhone.length === 11) return phoneError || t.appointmentForm.availableNumber;
                   return t.appointmentForm.phoneNumberRules;
                 })()}
               </span>
@@ -861,6 +913,13 @@ function StaffContactCard({
               </span>
             </div>
           </div>
+
+          {error && (
+            <div style={{ padding: "8px 10px", background: "#fde8e8", borderRadius: 6, color: "var(--destructive)", fontSize: 12 }}>
+              {error}
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: 8, marginTop: 6, justifyContent: "flex-end" }}>
             <button
               onClick={() => setEditing(false)}
@@ -871,15 +930,15 @@ function StaffContactCard({
             </button>
             <button
               onClick={save}
-              disabled={saving || (draftPhone.length > 0 && (draftPhone.length !== 11 || !draftPhone.startsWith("05")))}
+              disabled={saving || (draftPhone.length > 0 && (draftPhone.length !== 11 || !draftPhone.startsWith("05") || !!phoneError))}
               style={{
                 ...primaryBtnStyle,
                 display: "flex",
                 alignItems: "center",
                 gap: 4,
-                background: (saving || (draftPhone.length > 0 && (draftPhone.length !== 11 || !draftPhone.startsWith("05")))) ? "var(--muted)" : "var(--primary)",
-                color: (saving || (draftPhone.length > 0 && (draftPhone.length !== 11 || !draftPhone.startsWith("05")))) ? "var(--muted-foreground)" : "white",
-                cursor: (saving || (draftPhone.length > 0 && (draftPhone.length !== 11 || !draftPhone.startsWith("05")))) ? "default" : "pointer",
+                background: (saving || (draftPhone.length > 0 && (draftPhone.length !== 11 || !draftPhone.startsWith("05") || !!phoneError))) ? "var(--muted)" : "var(--primary)",
+                color: (saving || (draftPhone.length > 0 && (draftPhone.length !== 11 || !draftPhone.startsWith("05") || !!phoneError))) ? "var(--muted-foreground)" : "white",
+                cursor: (saving || (draftPhone.length > 0 && (draftPhone.length !== 11 || !draftPhone.startsWith("05") || !!phoneError))) ? "default" : "pointer",
               }}
             >
               <Check size={13} /> {saving ? t.appointments.saving : t.common.save}

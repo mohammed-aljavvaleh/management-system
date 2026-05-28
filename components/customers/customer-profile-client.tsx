@@ -410,7 +410,7 @@ function AppointmentHistoryRow({
           background: "var(--muted)", padding: "7px 11px",
           borderRadius: 6, borderLeft: "2px solid var(--border)",
         }}>
-          📝 {notes}
+          {notes}
         </div>
       )}
 
@@ -631,6 +631,22 @@ function ScheduleNextSessionDialog({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  useEffect(() => {
+    const mainEl = document.querySelector("main");
+    const originalOverflow = mainEl ? mainEl.style.overflow : "";
+    const originalBodyOverflow = document.body.style.overflow;
+
+    if (open) {
+      document.body.style.overflow = "hidden";
+      if (mainEl) mainEl.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      if (mainEl) mainEl.style.overflow = originalOverflow;
+    };
+  }, [open]);
+
   // Fetch availability dynamically
   useEffect(() => {
     if (!staffId || !dateStr || !open) return;
@@ -647,7 +663,7 @@ function ScheduleNextSessionDialog({
           const data = await res.json();
           const slots = data.slots || [];
           setAvailableSlots(slots);
-          
+
           // Pre-select the first available slot, or keep selection if it's still available
           if (slots.length > 0) {
             setTimeStr((prev) => (prev && slots.includes(prev) ? prev : slots[0]));
@@ -751,6 +767,9 @@ function ScheduleNextSessionDialog({
             display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
           }}
           onClick={() => !saving && setOpen(false)}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
         >
           <div
             className="admin-modal"

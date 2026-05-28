@@ -34,6 +34,8 @@ type Props = {
   heatmapData: number[][];
   cashCount: number;
   cardCount: number;
+  openingHour: string;
+  closingHour: string;
 };
 
 const SERVICE_COLORS = ["#c9956b", "#7b9ec9", "#9ec97b", "#c97bb5", "#c9b56b", "#7bc9c9"];
@@ -328,6 +330,8 @@ export function ReportsClient({
   heatmapData,
   cashCount,
   cardCount,
+  openingHour,
+  closingHour,
 }: Props) {
   const { t, lang, currency } = useLang();
   const router = useRouter();
@@ -339,6 +343,17 @@ export function ReportsClient({
 
   const [mounted, setMounted] = useState(false);
   const [monthlyGoal, setMonthlyGoal] = useState<number>(5000);
+
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [tooltipTimeoutId, setTooltipTimeoutId] = useState<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (tooltipTimeoutId) {
+        clearTimeout(tooltipTimeoutId);
+      }
+    };
+  }, [tooltipTimeoutId]);
 
   useEffect(() => {
     setMounted(true);
@@ -543,7 +558,11 @@ export function ReportsClient({
     t.heatmapDays.saturday,
   ];
 
-  const hourLabels = ["09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"];
+  const startHour = parseInt(openingHour.slice(0, 2), 10);
+  const endHour = parseInt(closingHour.slice(0, 2), 10);
+  const hourLabels = Array.from({ length: endHour - startHour + 1 }, (_, i) =>
+    String(startHour + i).padStart(2, "0")
+  );
   const maxDensity = Math.max(...heatmapData.flat(), 1);
 
   return (
@@ -753,13 +772,14 @@ export function ReportsClient({
                 value={mounted ? (monthlyGoal === 0 ? "" : monthlyGoal) : 5000}
                 onChange={(e) => handleGoalChange(e.target.value)}
                 style={{
-                  width: 60,
+                  width: 90,
                   background: "transparent",
                   border: "none",
                   borderBottom: "1px dashed var(--border)",
                   fontSize: 11,
                   fontWeight: 500,
                   color: "var(--foreground)",
+                  fontFamily: "inherit",
                   outline: "none",
                   padding: "0 2px"
                 }}
@@ -938,37 +958,62 @@ export function ReportsClient({
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: 15, marginBottom: 4, fontWeight: 500, color: "var(--foreground)" }}>
             {t.reports.densityHeatmap}
           </h2>
-          <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 14 }}>
+          <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 8 }}>
             {t.reports.heatmapSubtitle}
           </p>
 
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            {/* Hours Header */}
-            <div style={{ display: "grid", gridTemplateColumns: "32px repeat(12, 1fr)", gap: 4, marginBottom: 6, textAlign: "center" }}>
+          <div style={{ height: 28, display: "flex", alignItems: "center", marginBottom: 12 }}>
+            {activeTooltip ? (
+              <div
+                className="animate-fade-in"
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: 500,
+                  color: "#d4884a",
+                  background: "rgba(212, 136, 74, 0.08)",
+                  padding: "3px 8px",
+                  borderRadius: 6,
+                  border: "1px solid rgba(212, 136, 74, 0.2)",
+                  display: "inline-flex",
+                  alignItems: "center"
+                }}
+              >
+                {activeTooltip}
+              </div>
+            ) : (
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)", opacity: 0.8 }}>
+                {t.reports.heatmapHint}
+              </span>
+            )}
+          </div>
+
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", maxWidth: 320, width: "100%", margin: "0 auto" }}>
+            {/* Days Header */}
+            <div style={{ display: "grid", gridTemplateColumns: "28px repeat(7, 1fr)", gap: 4, marginBottom: 6, textAlign: "center" }}>
               <div />
-              {hourLabels.map((h) => (
-                <span key={h} style={{ fontSize: 9, fontWeight: 500, color: "var(--muted-foreground)" }}>
-                  {h}
+              {daysOfWeek.map((d) => (
+                <span key={d} style={{ fontSize: 9.5, fontWeight: 500, color: "var(--muted-foreground)" }}>
+                  {d}
                 </span>
               ))}
             </div>
 
             {/* Matrix Rows */}
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              {daysOfWeek.map((dayName, rIdx) => (
-                <div key={dayName} style={{ display: "grid", gridTemplateColumns: "32px repeat(12, 1fr)", gap: 4, alignItems: "center" }}>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)" }}>
-                    {dayName}
+              {hourLabels.map((hourStr, rIdx) => (
+                <div key={hourStr} style={{ display: "grid", gridTemplateColumns: "28px repeat(7, 1fr)", gap: 4, alignItems: "center" }}>
+                  <span style={{ fontSize: 10.5, fontWeight: 600, color: "var(--muted-foreground)", textAlign: "center" }}>
+                    {hourStr}
                   </span>
                   {heatmapData[rIdx].map((val, cIdx) => {
                     const opacity = val > 0 ? 0.15 + (val / maxDensity) * 0.85 : 0;
                     const bg = val > 0 ? `rgba(212, 136, 74, ${opacity})` : "var(--muted)";
 
                     const fullDayKeys = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
-                    const fullDayName = t.heatmapDaysFull[fullDayKeys[rIdx]];
+                    const fullDayName = t.heatmapDaysFull[fullDayKeys[cIdx]];
 
                     const appointmentsWord = val === 1 ? t.reports.booking : t.reports.bookings;
-                    const timeLabel = `${hourLabels[cIdx]}:00`;
+                    const timeLabel = `${hourStr}:00`;
                     const tooltipText = lang === "ar"
                       ? `${fullDayName} الساعة ${timeLabel} — ${val} ${appointmentsWord}`
                       : lang === "tr"
@@ -979,11 +1024,21 @@ export function ReportsClient({
                       <div
                         key={cIdx}
                         title={tooltipText}
+                        onClick={() => {
+                          if (tooltipTimeoutId) {
+                            clearTimeout(tooltipTimeoutId);
+                          }
+                          setActiveTooltip(tooltipText);
+                          const id = setTimeout(() => {
+                            setActiveTooltip(null);
+                          }, 4000);
+                          setTooltipTimeoutId(id);
+                        }}
                         style={{
-                          aspectRatio: "1/1",
+                          height: 22,
                           background: bg,
                           borderRadius: 3,
-                          cursor: "help",
+                          cursor: "pointer",
                         }}
                       />
                     );
@@ -994,7 +1049,7 @@ export function ReportsClient({
           </div>
 
           {/* Legend */}
-          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginTop: 14, fontSize: 11, color: "var(--muted-foreground)" }}>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 14, fontSize: 11, color: "var(--muted-foreground)", maxWidth: 320, width: "100%", margin: "14px auto 0" }}>
             <span>{t.reports.low}</span>
             <div style={{ display: "flex", gap: 2 }}>
               <div style={{ width: 10, height: 10, borderRadius: 1.5, background: "var(--muted)" }} />

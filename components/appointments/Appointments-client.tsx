@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   format,
   startOfMonth,
@@ -83,13 +83,43 @@ function PostponeDialog({
   const [notes, setNotes] = useState(appt.notes ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [openingHour, setOpeningHour] = useState("09:00");
+  const [closingHour, setClosingHour] = useState("18:00");
 
-  const TIME_SLOTS = useMemo(() => [
-    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
-    "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
-    "20:00", "20:30", "21:00", "21:30", "22:00",
-  ], []);
+  useEffect(() => {
+    const mainEl = document.querySelector("main");
+    const originalOverflow = mainEl ? mainEl.style.overflow : "";
+    const originalBodyOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    if (mainEl) mainEl.style.overflow = "hidden";
+
+    let active = true;
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!active) return;
+        if (data?.salon) {
+          if (data.salon.openingHour) setOpeningHour(data.salon.openingHour);
+          if (data.salon.closingHour) setClosingHour(data.salon.closingHour);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+      document.body.style.overflow = originalBodyOverflow;
+      if (mainEl) mainEl.style.overflow = originalOverflow;
+    };
+  }, []);
+
+  const TIME_SLOTS = useMemo(() => {
+    const allSlots = Array.from({ length: 48 }).map((_, i) => {
+      const h = String(Math.floor(i / 2)).padStart(2, "0");
+      const m = i % 2 === 0 ? "00" : "30";
+      return `${h}:${m}`;
+    });
+    return allSlots.filter((slot) => slot >= openingHour && slot <= closingHour);
+  }, [openingHour, closingHour]);
 
   const timeOptions = useMemo(() => {
     if (timeStr && !TIME_SLOTS.includes(timeStr)) {
@@ -122,7 +152,13 @@ function PostponeDialog({
   }
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
+    <div
+      style={overlayStyle}
+      onClick={onClose}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+    >
       <div className="admin-modal" style={dialogStyle} onClick={(e) => e.stopPropagation()}>
         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
           {t.appointments.postponeAppt}
@@ -204,6 +240,20 @@ function NotesDialog({
   const [notes, setNotes] = useState(appt.notes ?? "");
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    const mainEl = document.querySelector("main");
+    const originalOverflow = mainEl ? mainEl.style.overflow : "";
+    const originalBodyOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    if (mainEl) mainEl.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      if (mainEl) mainEl.style.overflow = originalOverflow;
+    };
+  }, []);
+
   async function handleSave() {
     setSaving(true);
     try {
@@ -223,7 +273,13 @@ function NotesDialog({
   }
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
+    <div
+      style={overlayStyle}
+      onClick={onClose}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+    >
       <div className="admin-modal" style={dialogStyle} onClick={(e) => e.stopPropagation()}>
         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
           {t.appointments.ApptNote}
@@ -270,6 +326,20 @@ function EditPriceDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    const mainEl = document.querySelector("main");
+    const originalOverflow = mainEl ? mainEl.style.overflow : "";
+    const originalBodyOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    if (mainEl) mainEl.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      if (mainEl) mainEl.style.overflow = originalOverflow;
+    };
+  }, []);
+
   async function handleSave() {
     const newPrice = Number(price);
     if (isNaN(newPrice) || newPrice < 0) {
@@ -300,7 +370,13 @@ function EditPriceDialog({
   }
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
+    <div
+      style={overlayStyle}
+      onClick={onClose}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+    >
       <div className="admin-modal" style={dialogStyle} onClick={(e) => e.stopPropagation()}>
         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
           {t.appointments.editPrice ?? "Edit Price"}
@@ -1392,6 +1468,20 @@ function PaymentPromptDialog({
 }) {
   const { t, lang } = useLang();
 
+  useEffect(() => {
+    const mainEl = document.querySelector("main");
+    const originalOverflow = mainEl ? mainEl.style.overflow : "";
+    const originalBodyOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    if (mainEl) mainEl.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      if (mainEl) mainEl.style.overflow = originalOverflow;
+    };
+  }, []);
+
   return (
     <div
       style={{
@@ -1400,6 +1490,9 @@ function PaymentPromptDialog({
         justifyContent: "center", zIndex: 1000,
       }}
       onClick={onClose}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
     >
       <div
         className="animate-scale-in admin-modal"

@@ -38,11 +38,20 @@
   padding: 0;
 }
 
-body, input, select, textarea, button {
+body, button {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-body);
   font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+input, select, textarea {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  font-size: 16px !important;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
@@ -92,7 +101,9 @@ textarea,
 
 .admin-scroll-x {
   overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
 }
 
 .admin-scroll-x > * {
@@ -104,9 +115,88 @@ textarea,
   word-break: normal;
 }
 
+/* ── Dashboard appointment rows ─────────────────────────────────────────── */
+.dashboard-appt-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 22px;
+}
+
+.dashboard-appt-time {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+  min-width: 44px;
+  flex-shrink: 0;
+}
+
+.dashboard-appt-avatar {
+  flex-shrink: 0;
+}
+
+.dashboard-appt-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dashboard-appt-customer {
+  font-weight: 500;
+  font-size: 13.5px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard-appt-meta {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Hidden on desktop — shown inline inside meta on mobile */
+.dashboard-appt-duration-inline {
+  display: none;
+}
+
+.dashboard-appt-duration {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.dashboard-appt-price {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--primary);
+  min-width: 60px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.dashboard-appt-status {
+  flex-shrink: 0;
+}
+
+.dashboard-appt-status span {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+/* ─────────────────────────────────────────────────────────────────────────── */
+
 .admin-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 32px;
 }
@@ -146,17 +236,90 @@ textarea,
   margin-top: 4px;
 }
 
+/* Horizontal Stat Cards (used in Services & Staff pages) */
+.horizontal-stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  width: 100%;
+}
+
+.horizontal-stat-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.horizontal-stat-info {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.horizontal-stat-value {
+  font-size: 18px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--foreground);
+  line-height: 1.25;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.horizontal-stat-value svg {
+  width: 16px !important;
+  height: 16px !important;
+  flex-shrink: 0;
+}
+
+.horizontal-stat-label {
+  font-size: 11.5px;
+  color: var(--muted-foreground);
+  margin-top: 2px;
+  line-height: 1.3;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.service-item-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 @media (max-width: 767px) {
+
+
   .admin-page {
     padding: 18px 14px 88px !important;
     max-width: none !important;
   }
 
   .admin-header {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 14px !important;
-    margin-bottom: 18px !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+    flex-wrap: wrap !important;
   }
 
   .admin-header h1 {
@@ -177,8 +340,32 @@ textarea,
   }
 
   .admin-stats {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 10px !important;
+  }
+
+  /* Dashboard appointment rows — mobile */
+  .dashboard-appt-row {
+    padding: 11px 14px !important;
+    gap: 10px !important;
+  }
+
+  .dashboard-appt-duration {
+    display: none !important;
+  }
+
+  .dashboard-appt-duration-inline {
+    display: inline !important;
+  }
+
+  .dashboard-appt-time {
+    min-width: 36px !important;
+    font-size: 12px !important;
+  }
+
+  .dashboard-appt-price {
+    min-width: 48px !important;
+    font-size: 12.5px !important;
   }
 
   .admin-stat-card {
@@ -210,6 +397,40 @@ textarea,
     margin-top: 2px !important;
   }
 
+  .horizontal-stat-card {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+  }
+
+  .horizontal-stat-icon-box {
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 8px !important;
+  }
+
+  .horizontal-stat-icon-box svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  .horizontal-stat-value {
+    font-size: 14px !important;
+    gap: 2px !important;
+  }
+
+  .horizontal-stat-value svg {
+    width: 13px !important;
+    height: 13px !important;
+  }
+
+  .horizontal-stat-label {
+    font-size: 10.5px !important;
+  }
+
+  .service-item-card {
+    padding: 14px 16px !important;
+  }
+
 
   .admin-two-col,
   .admin-calendar-layout {
@@ -229,11 +450,21 @@ textarea,
 
   .admin-status-row {
     flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .admin-status-row > div {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
   }
 
   .admin-status-row > a {
     margin-left: 0 !important;
-    width: 100% !important;
+    width: auto !important;
+    padding: 6px 14px !important;
+    font-size: 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
   }
@@ -387,15 +618,12 @@ textarea,
 }
 
 @media (max-width: 767px) {
+
+
   .admin-page {
     padding: 16px 14px !important;
   }
-  .admin-header {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-    margin-bottom: 16px !important;
-  }
+
   .admin-actions {
     justify-content: space-between !important;
     width: 100% !important;
@@ -436,5 +664,140 @@ textarea,
   }
   .admin-two-col {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* Dashboard Today's Appointments Row styling */
+.dashboard-appt-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 22px;
+}
+
+.dashboard-appt-time {
+  width: 64px;
+  flex-shrink: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.dashboard-appt-avatar {
+  flex-shrink: 0;
+}
+
+.dashboard-appt-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dashboard-appt-customer {
+  font-weight: 500;
+  font-size: 13.5px;
+  margin-bottom: 2px;
+}
+
+.dashboard-appt-meta {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.dashboard-appt-duration-inline {
+  display: none;
+}
+
+.dashboard-appt-duration {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.dashboard-appt-price {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--primary);
+  width: 60px;
+  text-align: right;
+}
+
+.dashboard-appt-status {
+  flex-shrink: 0;
+}
+
+.dashboard-appt-status span {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: capitalize;
+  display: inline-block;
+}
+
+@media (max-width: 767px) {
+  .dashboard-appt-row {
+    padding: 12px 14px !important;
+    gap: 12px !important;
+    display: grid !important;
+    grid-template-columns: auto 1fr auto !important;
+    grid-template-rows: auto auto !important;
+    grid-template-areas:
+      "avatar info status"
+      "time info price" !important;
+    align-items: center;
+  }
+
+  .dashboard-appt-avatar {
+    grid-area: avatar;
+  }
+
+  .dashboard-appt-time {
+    grid-area: time;
+    width: auto;
+    font-size: 12px;
+    color: var(--muted-foreground);
+    text-align: center;
+    margin-top: 2px;
+  }
+
+  .dashboard-appt-info {
+    grid-area: info;
+  }
+
+  .dashboard-appt-customer {
+    font-size: 13px;
+  }
+
+  .dashboard-appt-meta {
+    font-size: 11.5px;
+  }
+
+  .dashboard-appt-duration-inline {
+    display: inline;
+  }
+
+  .dashboard-appt-duration {
+    display: none !important;
+  }
+
+  .dashboard-appt-price {
+    grid-area: price;
+    font-size: 13px;
+    width: auto;
+    text-align: right;
+  }
+
+  .dashboard-appt-status {
+    grid-area: status;
+    text-align: right;
+  }
+
+  .admin-stats-3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+  .admin-stats-3 > *:last-child {
+    grid-column: span 2 !important;
   }
 }

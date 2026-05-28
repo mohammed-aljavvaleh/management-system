@@ -95,6 +95,9 @@ export function ShellClient({ children }: { children: React.ReactNode }) {
           <div
             className="mobile-backdrop"
             onClick={() => setIsOpen(false)}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
             style={{
               position: "fixed", inset: 0, zIndex: 30,
               background: "rgba(0,0,0,0.35)",

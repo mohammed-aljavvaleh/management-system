@@ -8,6 +8,13 @@ type SearchParams = Promise<{ range?: string; start?: string; end?: string }>;
 
 export default async function ReportsPage(props: { searchParams: SearchParams }) {
   const { salonId } = await requireSession();
+  const salon = await prisma.salon.findUnique({
+    where: { id: salonId },
+    select: { openingHour: true, closingHour: true },
+  });
+  const openingHour = parseInt(salon?.openingHour?.slice(0, 2) ?? "09", 10);
+  const closingHour = parseInt(salon?.closingHour?.slice(0, 2) ?? "20", 10);
+  const heatmapCols = closingHour - openingHour + 1;
   const searchParams = await props.searchParams;
   const range = searchParams.range || "7days";
   const startParam = searchParams.start;
@@ -50,7 +57,7 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
 
     prevStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     prevStartDate.setHours(0, 0, 0, 0);
-    
+
     const lastMonthDays = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
     const targetDay = Math.min(now.getDate(), lastMonthDays);
     prevEndDate = new Date(now.getFullYear(), now.getMonth() - 1, targetDay);
@@ -65,7 +72,7 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
 
     prevStartDate = new Date(now.getFullYear() - 1, 0, 1);
     prevStartDate.setHours(0, 0, 0, 0);
-    
+
     prevEndDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
     prevEndDate.setHours(23, 59, 59, 999);
   } else if (range === "custom" && startParam && endParam) {
@@ -94,12 +101,12 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
 
   // Fetch appointments for both current and previous ranges in one query
   const allAppointments = await prisma.appointment.findMany({
-    where: { 
-      salonId, 
-      startTime: { 
+    where: {
+      salonId,
+      startTime: {
         gte: prevStartDate,
         lte: endDate
-      } 
+      }
     },
     include: { service: true, staff: true },
     orderBy: { startTime: "asc" },
@@ -149,12 +156,12 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
     if (!staffMap[stid]) {
       staffMap[stid] = { name: a.staff.name, count: 0, revenue: 0, bookedCount: 0 };
     }
-    
+
     if (a.status === "COMPLETED") {
       staffMap[stid].count++;
       staffMap[stid].revenue += a.priceAtBooking;
     }
-    
+
     if (a.status === "COMPLETED" || a.status === "SCHEDULED") {
       staffMap[stid].bookedCount++;
     }
@@ -194,19 +201,19 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
   const currentMonthRevenue = monthlyCompleted._sum.priceAtBooking || 0;
 
   // Compute Heatmap (7 rows [Sun-Sat] x 12 cols [09:00-20:00])
-  const heatmapData = Array.from({ length: 7 }, () => Array(12).fill(0));
+  const heatmapData = Array.from({ length: heatmapCols }, () => Array(7).fill(0));
   for (const a of appointments) {
     if (a.status === "CANCELLED") continue;
-    // Shift by +3 hours to get local time in Saudi/Turkey timezone (UTC+3)
     const localDate = new Date(a.startTime.getTime() + 3 * 60 * 60 * 1000);
-    const day = localDate.getUTCDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+    const day = localDate.getUTCDay();
     const hour = localDate.getUTCHours();
-    if (hour >= 9 && hour <= 20) {
-      const row = day; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-      const col = hour - 9; // 09:00 = 0, ..., 20:00 = 11
+    if (hour >= openingHour && hour <= closingHour) {
+      const row = hour - openingHour;
+      const col = day;
       heatmapData[row][col]++;
     }
   }
+
 
   return (
     <ReportsClient
@@ -228,6 +235,8 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
       // Configurable Goal & Heatmap
       currentMonthRevenue={currentMonthRevenue}
       heatmapData={heatmapData}
+      openingHour={salon?.openingHour ?? "09:00"}
+      closingHour={salon?.closingHour ?? "20:00"}
       cashCount={cashCount}
       cardCount={cardCount}
     />
