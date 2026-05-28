@@ -159,7 +159,7 @@ export async function PATCH(
       });
       const maxDuration = longestService?.duration ?? 120;
 
-      const conflict = await prisma.appointment.findFirst({
+      const conflicts = await prisma.appointment.findMany({
         where: {
           salonId,
           staffId: current.staffId,
@@ -173,16 +173,18 @@ export async function PATCH(
         include: { service: true },
       });
 
-      if (conflict) {
+      const hasConflict = conflicts.some((conflict) => {
         const conflictEnd = new Date(
           conflict.startTime.getTime() + conflict.service.duration * 60 * 1000
         );
-        if (conflict.startTime < newEnd && conflictEnd > newStart) {
-          return NextResponse.json(
-            { error: t.apiErrors.staffTimeConflict },
-            { status: 409 }
-          );
-        }
+        return conflict.startTime < newEnd && conflictEnd > newStart;
+      });
+
+      if (hasConflict) {
+        return NextResponse.json(
+          { error: t.apiErrors.staffTimeConflict },
+          { status: 409 }
+        );
       }
 
       const data: Record<string, unknown> = { startTime: newStart };
@@ -200,26 +202,71 @@ export async function PATCH(
 
     // ── General updates (status, notes, price) ──────────────────────────────
     const data: Record<string, unknown> = {};
-    if (body.startTime !== undefined) {
-      const parsedStart = parseRequiredDate(body.startTime);
-      if (!parsedStart) return NextResponse.json({ error: t.apiErrors.invalidStartTime }, { status: 400 });
-      data.startTime = parsedStart;
-    }
-    if (body.serviceId !== undefined) {
-      const service = await prisma.service.findFirst({
-        where: { id: body.serviceId, salonId },
-        select: { id: true },
+
+    if (body.startTime !== undefined || body.staffId !== undefined || body.serviceId !== undefined) {
+      const current = await prisma.appointment.findFirst({
+        where: { id, salonId },
+        include: { service: true },
       });
-      if (!service) return NextResponse.json({ error: t.apiErrors.serviceNotFound }, { status: 404 });
-      data.serviceId = body.serviceId;
-    }
-    if (body.staffId !== undefined) {
-      const staff = await prisma.staff.findFirst({
-        where: { id: body.staffId, salonId },
-        select: { id: true },
+      if (!current) return NextResponse.json({ error: t.apiErrors.notFound }, { status: 404 });
+
+      const targetStart = body.startTime !== undefined
+        ? parseRequiredDate(body.startTime)
+        : current.startTime;
+      if (!targetStart) return NextResponse.json({ error: t.apiErrors.invalidStartTime }, { status: 400 });
+
+      const targetStaffId = body.staffId !== undefined
+        ? body.staffId
+        : current.staffId;
+
+      let targetService = current.service;
+      if (body.serviceId !== undefined && body.serviceId !== current.serviceId) {
+        const svc = await prisma.service.findFirst({
+          where: { id: body.serviceId, salonId },
+        });
+        if (!svc) return NextResponse.json({ error: t.apiErrors.serviceNotFound }, { status: 404 });
+        targetService = svc;
+      }
+
+      const targetEnd = new Date(targetStart.getTime() + targetService.duration * 60 * 1000);
+      const longestService = await prisma.service.findFirst({
+        where: { salonId },
+        orderBy: { duration: "desc" },
+        select: { duration: true },
       });
-      if (!staff) return NextResponse.json({ error: t.apiErrors.staffNotFound }, { status: 404 });
-      data.staffId = body.staffId;
+      const maxDuration = longestService?.duration ?? 120;
+
+      const conflicts = await prisma.appointment.findMany({
+        where: {
+          salonId,
+          staffId: targetStaffId,
+          status: { not: "CANCELLED" },
+          id: { not: id }, // exclude self
+          startTime: {
+            lt: targetEnd,
+            gt: new Date(targetStart.getTime() - maxDuration * 60 * 1000),
+          },
+        },
+        include: { service: true },
+      });
+
+      const hasConflict = conflicts.some((conflict) => {
+        const conflictEnd = new Date(
+          conflict.startTime.getTime() + conflict.service.duration * 60 * 1000
+        );
+        return conflict.startTime < targetEnd && conflictEnd > targetStart;
+      });
+
+      if (hasConflict) {
+        return NextResponse.json(
+          { error: t.apiErrors.staffTimeConflict },
+          { status: 409 }
+        );
+      }
+
+      if (body.startTime !== undefined) data.startTime = targetStart;
+      if (body.staffId !== undefined) data.staffId = targetStaffId;
+      if (body.serviceId !== undefined) data.serviceId = targetService.id;
     }
     if (body.status !== undefined) {
       if (!isAppointmentStatus(body.status)) {

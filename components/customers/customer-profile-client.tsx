@@ -656,8 +656,9 @@ function ScheduleNextSessionDialog({
     async function fetchAvailability() {
       setFetchingSlots(true);
       try {
+        const offset = new Date().getTimezoneOffset();
         const res = await fetch(
-          `/api/staff/${staffId}/availability?date=${dateStr}&duration=${duration}`
+          `/api/staff/${staffId}/availability?date=${dateStr}&duration=${duration}&offset=${offset}`
         );
         if (res.ok && active) {
           const data = await res.json();
