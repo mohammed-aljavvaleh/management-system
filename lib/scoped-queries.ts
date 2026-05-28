@@ -157,7 +157,7 @@ export async function getDashboardStats(salonId: string) {
   const startOfDay = new Date(today.setHours(0, 0, 0, 0));
   const endOfDay = new Date(today.setHours(23, 59, 59, 999));
 
-  const [todayCount, scheduledCount, customerCount, revenueToday] =
+  const [todayCount, scheduledCount, customerCount, revenueTodayAppointments, revenueTodayInstallments] =
     await Promise.all([
       prisma.appointment.count({
         where: { salonId, startTime: { gte: startOfDay, lte: endOfDay } },
@@ -173,13 +173,20 @@ export async function getDashboardStats(salonId: string) {
         },
         _sum: { priceAtBooking: true },
       }),
+      prisma.installment.aggregate({
+        where: {
+          userPackage: { salonId },
+          paidAt: { gte: startOfDay, lte: endOfDay },
+        },
+        _sum: { amount: true },
+      }),
     ]);
 
   return {
     todayAppointments: todayCount,
     upcomingAppointments: scheduledCount,
     totalCustomers: customerCount,
-    revenueToday: revenueToday._sum.priceAtBooking ?? 0,
+    revenueToday: (revenueTodayAppointments._sum.priceAtBooking ?? 0) + (revenueTodayInstallments._sum.amount ?? 0),
   };
 }
 

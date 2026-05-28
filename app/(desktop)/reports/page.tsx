@@ -99,24 +99,43 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
     prevEndDate.setHours(23, 59, 59, 999);
   }
 
-  // Fetch appointments for both current and previous ranges in one query
-  const allAppointments = await prisma.appointment.findMany({
-    where: {
-      salonId,
-      startTime: {
-        gte: prevStartDate,
-        lte: endDate
-      }
-    },
-    include: { service: true, staff: true },
-    orderBy: { startTime: "asc" },
-  });
+  // Fetch appointments and installments for both current and previous ranges
+  const [allAppointments, allInstallments] = await Promise.all([
+    prisma.appointment.findMany({
+      where: {
+        salonId,
+        startTime: {
+          gte: prevStartDate,
+          lte: endDate
+        }
+      },
+      include: { service: true, staff: true },
+      orderBy: { startTime: "asc" },
+    }),
+    prisma.installment.findMany({
+      where: {
+        userPackage: { salonId },
+        paidAt: {
+          gte: prevStartDate,
+          lte: endDate
+        }
+      },
+      orderBy: { paidAt: "asc" },
+    })
+  ]);
 
   const appointments = allAppointments.filter(
     (a) => a.startTime >= startDate && a.startTime <= endDate
   );
   const prevAppointments = allAppointments.filter(
     (a) => a.startTime >= prevStartDate && a.startTime <= prevEndDate
+  );
+
+  const installments = allInstallments.filter(
+    (inst) => inst.paidAt >= startDate && inst.paidAt <= endDate
+  );
+  const prevInstallments = allInstallments.filter(
+    (inst) => inst.paidAt >= prevStartDate && inst.paidAt <= prevEndDate
   );
 
   // Build daily data for charts
@@ -135,11 +154,79 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
     } else if (a.status === "COMPLETED") {
       byDay[key].count++;
       byDay[key].completed++;
-      byDay[key].revenue += a.priceAtBooking;
+      if (!a.userPackageId) {
+        byDay[key].revenue += a.priceAtBooking;
+      }
     }
   }
 
-  // Top services
+  // Add installments to daily revenue
+  for (const inst of installments) {
+    const key = inst.paidAt.toISOString().slice(0, 10);
+    if (byDay[key]) {
+      byDay[key].revenue += inst.amount;
+    }
+  }
+ 
+  // Calculations for current period
+  const completedAppointments = appointments.filter((a) => a.status === "COMPLETED");
+  const standardRevenue = completedAppointments
+    .filter((a) => !a.userPackageId)
+    .reduce((s, a) => s + a.priceAtBooking, 0);
+  const installmentRevenue = installments.reduce((s, inst) => s + inst.amount, 0);
+  const totalRevenue = standardRevenue + installmentRevenue;
+
+  const cancelledCount = appointments.filter((a) => a.status === "CANCELLED").length;
+  const completedCount = completedAppointments.length;
+  const cashCount = completedAppointments.filter((a) => a.paymentMethod === "CASH").length;
+  const cardCount = completedAppointments.filter((a) => a.paymentMethod === "CARD").length;
+
+  // Calculations for previous period (for trend arrows)
+  const prevCompletedAppointments = prevAppointments.filter((a) => a.status === "COMPLETED");
+  const prevStandardRevenue = prevCompletedAppointments
+    .filter((a) => !a.userPackageId)
+    .reduce((s, a) => s + a.priceAtBooking, 0);
+  const prevInstallmentRevenue = prevInstallments.reduce((s, inst) => s + inst.amount, 0);
+  const prevRevenue = prevStandardRevenue + prevInstallmentRevenue;
+
+  const prevCancelledCount = prevAppointments.filter((a) => a.status === "CANCELLED").length;
+  const prevCompletedCount = prevCompletedAppointments.length;
+
+  // Compute monthly goal tracker revenue (Current Month Completed Revenue)
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const [monthlyCompleted, monthlyInstallments] = await Promise.all([
+    prisma.appointment.aggregate({
+      where: {
+        salonId,
+        status: "COMPLETED",
+        userPackageId: null, // exclude package appointments
+        startTime: {
+          gte: startOfMonth,
+          lte: now
+        }
+      },
+      _sum: {
+        priceAtBooking: true
+      }
+    }),
+    prisma.installment.aggregate({
+      where: {
+        userPackage: { salonId },
+        paidAt: {
+          gte: startOfMonth,
+          lte: now
+        }
+      },
+      _sum: {
+        amount: true
+      }
+    })
+  ]);
+  const currentMonthRevenue = (monthlyCompleted._sum.priceAtBooking || 0) + (monthlyInstallments._sum.amount || 0);
+
+  // Top services (using priceAtBooking to show value delivered)
   const serviceMap: Record<string, { name: string; count: number; revenue: number }> = {};
   for (const a of appointments) {
     if (a.status !== "COMPLETED") continue;
@@ -166,39 +253,6 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
       staffMap[stid].bookedCount++;
     }
   }
-
-  // Calculations for current period
-  const completedAppointments = appointments.filter((a) => a.status === "COMPLETED");
-  const totalRevenue = completedAppointments.reduce((s, a) => s + a.priceAtBooking, 0);
-  const cancelledCount = appointments.filter((a) => a.status === "CANCELLED").length;
-  const completedCount = completedAppointments.length;
-  const cashCount = completedAppointments.filter((a) => a.paymentMethod === "CASH").length;
-  const cardCount = completedAppointments.filter((a) => a.paymentMethod === "CARD").length;
-
-  // Calculations for previous period (for trend arrows)
-  const prevCompletedAppointments = prevAppointments.filter((a) => a.status === "COMPLETED");
-  const prevRevenue = prevCompletedAppointments.reduce((s, a) => s + a.priceAtBooking, 0);
-  const prevCancelledCount = prevAppointments.filter((a) => a.status === "CANCELLED").length;
-  const prevCompletedCount = prevCompletedAppointments.length;
-
-  // Compute monthly goal tracker revenue (Current Month Completed Revenue)
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  startOfMonth.setHours(0, 0, 0, 0);
-
-  const monthlyCompleted = await prisma.appointment.aggregate({
-    where: {
-      salonId,
-      status: "COMPLETED",
-      startTime: {
-        gte: startOfMonth,
-        lte: now
-      }
-    },
-    _sum: {
-      priceAtBooking: true
-    }
-  });
-  const currentMonthRevenue = monthlyCompleted._sum.priceAtBooking || 0;
 
   // Compute Heatmap (7 rows [Sun-Sat] x 12 cols [09:00-20:00])
   const heatmapData = Array.from({ length: heatmapCols }, () => Array(7).fill(0));
