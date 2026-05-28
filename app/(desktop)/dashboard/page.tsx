@@ -38,9 +38,19 @@ export default async function DashboardPage() {
       }),
     ]);
 
-  const todayRevenue = todayAppointments
-    .filter((a) => a.status === "COMPLETED")
+  const standardRevenue = todayAppointments
+    .filter((a) => a.status === "COMPLETED" && !a.userPackageId)
     .reduce((s, a) => s + a.priceAtBooking, 0);
+
+  const todayInstallments = await prisma.installment.findMany({
+    where: {
+      userPackage: { salonId },
+      paidAt: { gte: today, lt: tomorrow },
+    },
+  });
+  const installmentRevenue = todayInstallments.reduce((s, inst) => s + inst.amount, 0);
+
+  const todayRevenue = standardRevenue + installmentRevenue;
 
   return (
     <DashboardClient
