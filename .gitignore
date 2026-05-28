@@ -93,3 +93,7 @@ Desktop.ini
 .agents/
 .claude/
 skills-lock.json
+
+# Scratch files / debugging scripts
+/scratch/
+
