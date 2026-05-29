@@ -20,21 +20,11 @@ const ROLES = [
   "Owner",
   "Manager",
   "Receptionist",
-  "Hairdresser",
   "Hair Stylist",
-  "Colorist",
-  "Nail Artist",
   "Nail Technician",
-  "Manicurist",
   "Aesthetician",
-  "Laser Technician",
   "Makeup Artist",
-  "Brow & Lash Artist",
-  "Masseuse",
-  "Masseur",
-  "Technician",
-  "Senior Technician",
-  "Junior Technician"
+  "Technician"
 ];
 
 
@@ -48,7 +38,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
   const [error, setError] = useState("");
 
   const [name, setName] = useState("");
-  const [role, setRole] = useState("Technician");
+  const [role, setRole] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
@@ -113,7 +103,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
   function openCreate() {
     setEditId(null);
     setName("");
-    setRole("Technician");
+    setRole("");
     setEmail("");
     setPhone("");
     setPhoneError("");
@@ -375,13 +365,20 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
                 </div>
                 <div>
                   <label style={labelStyle}>{t.staff.role}</label>
-                  <select value={role} onChange={(e) => setRole(e.target.value)} style={inputStyle}>
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>
-                        {(t.staff.roles as any)[r] || r}
-                      </option>
-                    ))}
-                  </select>
+                  <input
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    placeholder={t.staff.rolePlaceholder}
+                    required
+                    list="staff-roles"
+                    style={inputStyle}
+                  />
+                  <datalist id="staff-roles">
+                    {ROLES.map((r) => {
+                      const translated = (t.staff.roles as any)[r] || r;
+                      return <option key={r} value={translated} />;
+                    })}
+                  </datalist>
                 </div>
                 <div>
                   <label style={labelStyle}>{t.staff.email}</label>

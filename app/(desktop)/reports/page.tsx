@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { ReportsClient } from "@/components/reports/reports-client";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,14 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
   const startParam = searchParams.start;
   const endParam = searchParams.end;
 
+  const cookieStore = await cookies();
+  const offsetParam = cookieStore.get("timezone-offset")?.value;
+  const offset = offsetParam ? parseInt(offsetParam, 10) : -180; // Default to UTC+3 (Turkey/Saudi)
+
   const now = new Date();
+  const localTimeMs = now.getTime() - offset * 60 * 1000;
+  const localDate = new Date(localTimeMs);
+
   let startDate = new Date();
   let endDate = new Date();
   let daysCount = 7;
@@ -28,75 +36,87 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
   let prevStartDate = new Date();
   let prevEndDate = new Date();
 
+  // Helper to construct UTC representation of local midnight
+  function getLocalMidnight(dayAdjustment: number): Date {
+    const d = new Date(localDate);
+    d.setUTCHours(0, 0, 0, 0);
+    d.setUTCDate(d.getUTCDate() + dayAdjustment);
+    return new Date(d.getTime() + offset * 60 * 1000);
+  }
+
   if (range === "today") {
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
+    startDate = getLocalMidnight(0);
+    endDate = new Date(getLocalMidnight(1).getTime() - 1);
     daysCount = 1;
 
-    prevStartDate.setDate(now.getDate() - 1);
-    prevStartDate.setHours(0, 0, 0, 0);
-    prevEndDate.setDate(now.getDate() - 1);
-    prevEndDate.setHours(23, 59, 59, 999);
+    prevStartDate = getLocalMidnight(-1);
+    prevEndDate = new Date(getLocalMidnight(0).getTime() - 1);
   } else if (range === "7days") {
-    startDate.setDate(now.getDate() - 6);
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
+    startDate = getLocalMidnight(-6);
+    endDate = new Date(getLocalMidnight(1).getTime() - 1);
     daysCount = 7;
 
-    prevStartDate.setDate(now.getDate() - 13);
-    prevStartDate.setHours(0, 0, 0, 0);
-    prevEndDate.setDate(now.getDate() - 7);
-    prevEndDate.setHours(23, 59, 59, 999);
+    prevStartDate = getLocalMidnight(-13);
+    prevEndDate = new Date(getLocalMidnight(-6).getTime() - 1);
   } else if (range === "thisMonth") {
-    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    startDate.setHours(0, 0, 0, 0);
-    endDate = new Date(now);
-    endDate.setHours(23, 59, 59, 999);
+    const localStartOfMonth = new Date(localDate);
+    localStartOfMonth.setUTCHours(0, 0, 0, 0);
+    localStartOfMonth.setUTCDate(1);
+    startDate = new Date(localStartOfMonth.getTime() + offset * 60 * 1000);
+
+    endDate = new Date(getLocalMidnight(1).getTime() - 1);
     const timeDiff = endDate.getTime() - startDate.getTime();
     daysCount = Math.max(Math.floor(timeDiff / (1000 * 60 * 60 * 24)) + 1, 1);
 
-    prevStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    prevStartDate.setHours(0, 0, 0, 0);
+    const localStartOfLastMonth = new Date(localStartOfMonth);
+    localStartOfLastMonth.setUTCMonth(localStartOfLastMonth.getUTCMonth() - 1);
+    prevStartDate = new Date(localStartOfLastMonth.getTime() + offset * 60 * 1000);
 
-    const lastMonthDays = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
-    const targetDay = Math.min(now.getDate(), lastMonthDays);
-    prevEndDate = new Date(now.getFullYear(), now.getMonth() - 1, targetDay);
-    prevEndDate.setHours(23, 59, 59, 999);
+    const lastMonthDays = new Date(Date.UTC(localDate.getUTCFullYear(), localDate.getUTCMonth(), 0)).getUTCDate();
+    const targetDay = Math.min(localDate.getUTCDate(), lastMonthDays);
+    const localEndOfLastMonthPeriod = new Date(localStartOfLastMonth);
+    localEndOfLastMonthPeriod.setUTCDate(targetDay + 1);
+    prevEndDate = new Date(localEndOfLastMonthPeriod.getTime() + offset * 60 * 1000 - 1);
   } else if (range === "thisYear") {
-    startDate = new Date(now.getFullYear(), 0, 1);
-    startDate.setHours(0, 0, 0, 0);
-    endDate = new Date(now);
-    endDate.setHours(23, 59, 59, 999);
+    const localStartOfYear = new Date(localDate);
+    localStartOfYear.setUTCHours(0, 0, 0, 0);
+    localStartOfYear.setUTCMonth(0, 1);
+    startDate = new Date(localStartOfYear.getTime() + offset * 60 * 1000);
+
+    endDate = new Date(getLocalMidnight(1).getTime() - 1);
     const timeDiff = endDate.getTime() - startDate.getTime();
     daysCount = Math.max(Math.floor(timeDiff / (1000 * 60 * 60 * 24)) + 1, 1);
 
-    prevStartDate = new Date(now.getFullYear() - 1, 0, 1);
-    prevStartDate.setHours(0, 0, 0, 0);
+    const localStartOfLastYear = new Date(localStartOfYear);
+    localStartOfLastYear.setUTCFullYear(localStartOfLastYear.getUTCFullYear() - 1);
+    prevStartDate = new Date(localStartOfLastYear.getTime() + offset * 60 * 1000);
 
-    prevEndDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-    prevEndDate.setHours(23, 59, 59, 999);
+    const localEndOfLastYearPeriod = new Date(localDate);
+    localEndOfLastYearPeriod.setUTCHours(0, 0, 0, 0);
+    localEndOfLastYearPeriod.setUTCFullYear(localEndOfLastYearPeriod.getUTCFullYear() - 1);
+    localEndOfLastYearPeriod.setUTCDate(localEndOfLastYearPeriod.getUTCDate() + 1);
+    prevEndDate = new Date(localEndOfLastYearPeriod.getTime() + offset * 60 * 1000 - 1);
   } else if (range === "custom" && startParam && endParam) {
-    startDate = new Date(startParam + "T00:00:00");
-    endDate = new Date(endParam + "T23:59:59");
+    const localStart = new Date(`${startParam}T00:00:00Z`);
+    startDate = new Date(localStart.getTime() + offset * 60 * 1000);
+
+    const localEnd = new Date(`${endParam}T23:59:59.999Z`);
+    endDate = new Date(localEnd.getTime() + offset * 60 * 1000);
+
     const timeDiff = endDate.getTime() - startDate.getTime();
     daysCount = Math.max(Math.floor(timeDiff / (1000 * 60 * 60 * 24)) + 1, 1);
 
-    const diff = endDate.getTime() - startDate.getTime();
-    prevStartDate = new Date(startDate.getTime() - diff - 1000);
-    prevStartDate.setHours(0, 0, 0, 0);
-    prevEndDate = new Date(startDate.getTime() - 1000);
-    prevEndDate.setHours(23, 59, 59, 999);
+    const diff = endDate.getTime() - startDate.getTime() + 1;
+    prevStartDate = new Date(startDate.getTime() - diff);
+    prevEndDate = new Date(endDate.getTime() - diff);
   } else {
     // Default to 7days
-    startDate.setDate(now.getDate() - 6);
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
+    startDate = getLocalMidnight(-6);
+    endDate = new Date(getLocalMidnight(1).getTime() - 1);
     daysCount = 7;
 
-    prevStartDate.setDate(now.getDate() - 13);
-    prevStartDate.setHours(0, 0, 0, 0);
-    prevEndDate.setDate(now.getDate() - 7);
-    prevEndDate.setHours(23, 59, 59, 999);
+    prevStartDate = getLocalMidnight(-13);
+    prevEndDate = new Date(getLocalMidnight(-6).getTime() - 1);
   }
 
   // Fetch appointments and installments for both current and previous ranges
@@ -141,13 +161,13 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
   // Build daily data for charts
   const byDay: Record<string, { count: number; revenue: number; completed: number; cancelled: number }> = {};
   for (let i = 0; i < daysCount; i++) {
-    const d = new Date(startDate);
-    d.setDate(d.getDate() + i);
+    const d = new Date(startDate.getTime() - offset * 60 * 1000);
+    d.setUTCDate(d.getUTCDate() + i);
     byDay[d.toISOString().slice(0, 10)] = { count: 0, revenue: 0, completed: 0, cancelled: 0 };
   }
 
   for (const a of appointments) {
-    const key = a.startTime.toISOString().slice(0, 10);
+    const key = new Date(a.startTime.getTime() - offset * 60 * 1000).toISOString().slice(0, 10);
     if (!byDay[key]) continue;
     if (a.status === "CANCELLED") {
       byDay[key].cancelled++;
@@ -162,7 +182,7 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
 
   // Add installments to daily revenue
   for (const inst of installments) {
-    const key = inst.paidAt.toISOString().slice(0, 10);
+    const key = new Date(inst.paidAt.getTime() - offset * 60 * 1000).toISOString().slice(0, 10);
     if (byDay[key]) {
       byDay[key].revenue += inst.amount;
     }
@@ -193,8 +213,10 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
   const prevCompletedCount = prevCompletedAppointments.length;
 
   // Compute monthly goal tracker revenue (Current Month Completed Revenue)
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  startOfMonth.setHours(0, 0, 0, 0);
+  const localStartOfMonth = new Date(localDate);
+  localStartOfMonth.setUTCHours(0, 0, 0, 0);
+  localStartOfMonth.setUTCDate(1);
+  const startOfMonth = new Date(localStartOfMonth.getTime() + offset * 60 * 1000);
 
   const [monthlyCompleted, monthlyInstallments] = await Promise.all([
     prisma.appointment.aggregate({
@@ -258,7 +280,7 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
   const heatmapData = Array.from({ length: heatmapCols }, () => Array(7).fill(0));
   for (const a of appointments) {
     if (a.status === "CANCELLED") continue;
-    const localDate = new Date(a.startTime.getTime() + 3 * 60 * 60 * 1000);
+    const localDate = new Date(a.startTime.getTime() - offset * 60 * 1000);
     const day = localDate.getUTCDay();
     const hour = localDate.getUTCHours();
     if (hour >= openingHour && hour <= closingHour) {

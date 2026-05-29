@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { CalendarDays, TurkishLira, Clock, IdCardLanyard, Scissors, TrendingUp, SaudiRiyal } from "lucide-react";
+import { CalendarDays, TurkishLira, Clock, IdCardLanyard, Scissors, TrendingUp, SaudiRiyal, Award } from "lucide-react";
 import Link from "next/link";
 import { useLang, Price } from "@/components/providers/language-provider";
 import { ar } from "date-fns/locale/ar";
@@ -170,225 +170,302 @@ export function DashboardClient({
         ))}
       </div>
 
-
-      {/* Working Hours Settings Card */}
-      {salon && (
-        <div 
-          className="animate-fade-in"
-          style={{ 
-            marginBottom: 28, 
-            background: "var(--card)", 
-            border: "1px solid var(--border)", 
-            borderRadius: 12, 
-            padding: "20px 24px"
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ 
-              width: 32, height: 32, borderRadius: 8, 
-              background: "rgba(212, 136, 74, 0.1)", 
-              display: "flex", alignItems: "center", justifyContent: "center" 
-            }}>
-              <Clock size={16} color="#d4884a" />
-            </div>
-            <div>
-              <h2 style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 500, margin: 0 }}>
-                {t.dashboard.workingHours}
-              </h2>
-            </div>
-          </div>
-
-
-          <div style={{ 
-            display: "flex", 
-            gap: 16, 
-            marginTop: 20, 
-            alignItems: "flex-end", 
-            flexWrap: "wrap" 
-          }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--muted-foreground)" }}>
-                {t.dashboard.openingHour}
-              </label>
-              <select
-                value={openingHour}
-                onChange={(e) => setOpeningHour(e.target.value)}
-                style={selectStyle}
-              >
-                {HOUR_OPTIONS.map((slot) => (
-                  <option key={slot} value={slot}>
-                    {slot}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--muted-foreground)" }}>
-                {t.dashboard.closingHour}
-              </label>
-              <select
-                value={closingHour}
-                onChange={(e) => setClosingHour(e.target.value)}
-                style={selectStyle}
-              >
-                {HOUR_OPTIONS.map((slot) => (
-                  <option key={slot} value={slot}>
-                    {slot}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              onClick={handleSaveSettings}
-              disabled={updating}
-              style={{
-                padding: "9px 20px",
-                background: saveSuccess ? "#2d7a2d" : "var(--primary)",
-                color: "white",
-                border: "none",
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 500,
-                cursor: updating ? "not-allowed" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                transition: "all 0.2s ease",
-                height: 38,
-                boxSizing: "border-box"
-              }}
-            >
-              {updating ? (
-                <>
-                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
-                  <span>{t.dashboard.savingSettings}</span>
-                </>
-              ) : saveSuccess ? (
-                <span>{t.dashboard.settingsSaved}</span>
-              ) : (
-                <span>{t.dashboard.saveSettings}</span>
-              )}
-            </button>
-          </div>
-
-          {saveError && (
-            <div style={{ 
-              marginTop: 12, 
-              padding: "8px 12px", 
-              background: "#fde8e8", 
-              borderRadius: 6, 
-              color: "#a01a1a", 
-              fontSize: 12.5,
-              display: "inline-block"
-            }}>
-              {saveError}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Status row */}
-      <div className="admin-status-row" style={{ display: "flex", gap: 12, marginBottom: 28 }}>
-        {[
-          { label: t.dashboard.scheduled, value: scheduled, color: "#1a6fa0", bg: "#e8f4fd" },
-          { label: t.dashboard.completed, value: completed, color: "#2d7a2d", bg: "#e8f5e8" },
-          { label: t.dashboard.cancelled, value: cancelled, color: "#a01a1a", bg: "#fde8e8" },
-        ].map((s) => (
-          <div
-            key={s.label}
-            style={{
-              padding: "8px 16px", borderRadius: 8,
-              background: s.bg, color: s.color,
-              fontSize: 13, fontWeight: 500,
-            }}
-          >
-            {s.value} {s.label}
-          </div>
-        ))}
-        <Link
-          href="/appointments/new"
-          style={{
-            marginLeft: "auto", padding: "8px 20px", borderRadius: 8,
-            background: "var(--primary)", color: "white",
-            fontSize: 13, fontWeight: 500, textDecoration: "none",
-          }}
-        >
-          + {t.dashboard.newAppointment}
-        </Link>
-      </div>
-
-      {/* Today's Appointments */}
-      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-        <div style={{
-          padding: "18px 22px", borderBottom: "1px solid var(--border)",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 500 }}>
-            {t.dashboard.todaySchedule}
-          </h2>
-          <Link href="/appointments" style={{ fontSize: 12.5, color: "var(--primary)", textDecoration: "none" }}>
-            {t.dashboard.viewAll}
-          </Link>
-        </div>
-
-        {todayAppointments.length === 0 ? (
-          <div style={{ padding: "48px 22px", textAlign: "center", color: "var(--muted-foreground)" }}>
-            <CalendarDays size={32} style={{ margin: "0 auto 12px", opacity: 0.4 }} />
-            <p>{t.dashboard.noAppointments}</p>
-          </div>
-        ) : (
-          <div>
-            {todayAppointments.map((appt, i) => (
+      {/* Two-Column Responsive Layout Grid */}
+      <div className="dashboard-grid-container">
+        
+        {/* Left Column: Today's Schedule & Status Row */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          
+          {/* Status row */}
+          <div className="admin-status-row" style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            {[
+              { label: t.dashboard.scheduled, value: scheduled, color: "#1a6fa0", bg: "#e8f4fd" },
+              { label: t.dashboard.completed, value: completed, color: "#2d7a2d", bg: "#e8f5e8" },
+              { label: t.dashboard.cancelled, value: cancelled, color: "#a01a1a", bg: "#fde8e8" },
+            ].map((s) => (
               <div
-                key={appt.id}
-                className="animate-fade-in dashboard-appt-row"
+                key={s.label}
                 style={{
-                  animationDelay: `${i * 40}ms`,
-                  borderBottom: i < todayAppointments.length - 1 ? "1px solid var(--border)" : "none",
+                  padding: "8px 16px", borderRadius: 8,
+                  background: s.bg, color: s.color,
+                  fontSize: 13, fontWeight: 500,
                 }}
               >
-                <div className="dashboard-appt-time">
-                  {format(new Date(appt.startTime), "HH:mm")}
-                </div>
-
-                <div className="dashboard-appt-avatar">
-                  <Avatar name={appt.customer.name} size={36} />
-                </div>
-
-                <div className="dashboard-appt-info">
-                  <div className="dashboard-appt-customer">
-                    {appt.customer.name}
-                  </div>
-                  <div className="dashboard-appt-meta">
-                    {appt.service.name} · {appt.staff.name}
-                    <span className="dashboard-appt-duration-inline"> · {appt.service.duration}{t.services.min}</span>
-                  </div>
-                </div>
-
-                <div className="dashboard-appt-duration">
-                  <Clock size={12} />
-                  <span>{appt.service.duration}{t.services.min}</span>
-                </div>
-
-                <div className="dashboard-appt-price">
-                  <Price amount={appt.priceAtBooking} />
-                </div>
-
-                <div className="dashboard-appt-status">
-                  <span className={`status-${appt.status.toLowerCase()}`}>
-                    {appt.status === "SCHEDULED" ? t.appointments.statuses.scheduled
-                    : appt.status === "COMPLETED" ? t.appointments.statuses.completed
-                    : t.appointments.statuses.cancelled}
-                  </span>
-                </div>
+                {s.value} {s.label}
               </div>
             ))}
+            <Link
+              href="/appointments/new"
+              style={{
+                marginLeft: "auto", padding: "8px 20px", borderRadius: 8,
+                background: "var(--primary)", color: "white",
+                fontSize: 13, fontWeight: 500, textDecoration: "none",
+                textAlign: "center"
+              }}
+            >
+              + {t.dashboard.newAppointment}
+            </Link>
           </div>
-        )}
-      </div>
 
+          {/* Today's Appointments Table */}
+          <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{
+              padding: "18px 22px", borderBottom: "1px solid var(--border)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <h2 style={{ fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 500 }}>
+                {t.dashboard.todaySchedule}
+              </h2>
+              <Link href="/appointments" style={{ fontSize: 12.5, color: "var(--primary)", textDecoration: "none" }}>
+                {t.dashboard.viewAll}
+              </Link>
+            </div>
+
+            {todayAppointments.length === 0 ? (
+              <div style={{ padding: "48px 22px", textAlign: "center", color: "var(--muted-foreground)" }}>
+                <CalendarDays size={32} style={{ margin: "0 auto 12px", opacity: 0.4 }} />
+                <p>{t.dashboard.noAppointments}</p>
+              </div>
+            ) : (
+              <div>
+                {todayAppointments.map((appt, i) => (
+                  <div
+                    key={appt.id}
+                    className="animate-fade-in dashboard-appt-row"
+                    style={{
+                      animationDelay: `${i * 40}ms`,
+                      borderBottom: i < todayAppointments.length - 1 ? "1px solid var(--border)" : "none",
+                    }}
+                  >
+                    <div className="dashboard-appt-time">
+                      {`${format(new Date(appt.startTime), "HH:mm")}–${format(new Date(new Date(appt.startTime).getTime() + appt.service.duration * 60000), "HH:mm")}`}
+                    </div>
+
+                    <div className="dashboard-appt-avatar">
+                      <Avatar name={appt.customer.name} size={36} />
+                    </div>
+
+                    <div className="dashboard-appt-info">
+                      <div className="dashboard-appt-customer">
+                        {appt.customer.name}
+                      </div>
+                      <div className="dashboard-appt-meta">
+                        {appt.service.name} · {appt.staff.name}
+                      </div>
+                    </div>
+
+                    <div className="dashboard-appt-price">
+                      <Price amount={appt.priceAtBooking} />
+                    </div>
+
+                    <div className="dashboard-appt-status">
+                      <span className={`status-${appt.status.toLowerCase()}`}>
+                        {appt.status === "SCHEDULED" ? t.appointments.statuses.scheduled
+                        : appt.status === "COMPLETED" ? t.appointments.statuses.completed
+                        : t.appointments.statuses.cancelled}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+        </div>
+
+        {/* Right Column: Working Hours Card & Today's Summary Insights */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          
+          {/* Working Hours Settings Card */}
+          {salon && (
+            <div 
+              className="animate-fade-in"
+              style={{ 
+                background: "var(--card)", 
+                border: "1px solid var(--border)", 
+                borderRadius: 12, 
+                padding: "20px 24px"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ 
+                  width: 32, height: 32, borderRadius: 8, 
+                  background: "rgba(212, 136, 74, 0.1)", 
+                  display: "flex", alignItems: "center", justifyContent: "center" 
+                }}>
+                  <Clock size={16} color="#d4884a" />
+                </div>
+                <div>
+                  <h2 style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 500, margin: 0 }}>
+                    {t.dashboard.workingHours}
+                  </h2>
+                </div>
+              </div>
+
+              <div style={{ 
+                display: "grid", 
+                gridTemplateColumns: "1fr 1fr", 
+                gap: 12, 
+                marginTop: 20, 
+              }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: 12, fontWeight: 500, color: "var(--muted-foreground)" }}>
+                    {t.dashboard.openingHour}
+                  </label>
+                  <select
+                    value={openingHour}
+                    onChange={(e) => setOpeningHour(e.target.value)}
+                    style={selectStyle}
+                  >
+                    {HOUR_OPTIONS.map((slot) => (
+                      <option key={slot} value={slot}>
+                        {slot}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: 12, fontWeight: 500, color: "var(--muted-foreground)" }}>
+                    {t.dashboard.closingHour}
+                  </label>
+                  <select
+                    value={closingHour}
+                    onChange={(e) => setClosingHour(e.target.value)}
+                    style={selectStyle}
+                  >
+                    {HOUR_OPTIONS.map((slot) => (
+                      <option key={slot} value={slot}>
+                        {slot}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <button
+                onClick={handleSaveSettings}
+                disabled={updating}
+                style={{
+                  marginTop: 16,
+                  width: "100%",
+                  padding: "9px 20px",
+                  background: saveSuccess ? "#2d7a2d" : "var(--primary)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: updating ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  transition: "all 0.2s ease",
+                  height: 38,
+                  boxSizing: "border-box"
+                }}
+              >
+                {updating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
+                    <span>{t.dashboard.savingSettings}</span>
+                  </>
+                ) : saveSuccess ? (
+                  <span>{t.dashboard.settingsSaved}</span>
+                ) : (
+                  <span>{t.dashboard.saveSettings}</span>
+                )}
+              </button>
+
+              {saveError && (
+                <div style={{ 
+                  marginTop: 12, 
+                  padding: "8px 12px", 
+                  background: "#fde8e8", 
+                  borderRadius: 6, 
+                  color: "#a01a1a", 
+                  fontSize: 12.5,
+                  display: "block",
+                  textAlign: "center"
+                }}>
+                  {saveError}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Today's Summary Insight Card */}
+          {todayAppointments.length > 0 && (
+            <div
+              className="animate-fade-in"
+              style={{
+                background: "var(--card)",
+                border: "1px solid var(--border)",
+                borderRadius: 12,
+                padding: "20px 24px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8,
+                  background: "rgba(201, 149, 107, 0.1)",
+                  display: "flex", alignItems: "center", justifyContent: "center"
+                }}>
+                  <Award size={16} color="var(--primary)" />
+                </div>
+                <h2 style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 500, margin: 0 }}>
+                  {lang === "ar" ? "ملخص اليوم" : (lang === "tr" ? "Günün Özeti" : "Today's Summary")}
+                </h2>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 500, marginBottom: 6 }}>
+                    <span style={{ color: "var(--muted-foreground)" }}>
+                      {lang === "ar" ? "معدل الإنجاز" : (lang === "tr" ? "Tamamlanma Oranı" : "Completion Rate")}
+                    </span>
+                    <span style={{ color: "var(--primary)" }}>
+                      {(() => {
+                        const activeCount = todayAppointments.length - cancelled;
+                        const rate = activeCount > 0 ? Math.round((completed / activeCount) * 100) : 0;
+                        return rate;
+                      })()}%
+                    </span>
+                  </div>
+                  <div style={{ height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{ 
+                      height: "100%", 
+                      width: `${(() => {
+                        const activeCount = todayAppointments.length - cancelled;
+                        return activeCount > 0 ? Math.round((completed / activeCount) * 100) : 0;
+                      })()}%`, 
+                      background: "var(--primary)", 
+                      transition: "width 0.5s ease" 
+                    }} />
+                  </div>
+                </div>
+
+                <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", lineHeight: 1.5, margin: 0 }}>
+                  {(() => {
+                    const activeCount = todayAppointments.length - cancelled;
+                    const rate = activeCount > 0 ? Math.round((completed / activeCount) * 100) : 0;
+                    if (rate === 100 && scheduled === 0 && completed > 0) {
+                      return lang === "ar" ? "عمل رائع! تم إكمال جميع المواعيد اليوم." : (lang === "tr" ? "Harika iş! Bugünün tüm randevuları tamamlandı." : "Great job! All appointments for today have been completed.");
+                    }
+                    if (scheduled > 0) {
+                      return lang === "ar" ? `لديك ${scheduled} موعد قادم مجدول اليوم.` : (lang === "tr" ? `Bugün planlanmış ${scheduled} yaklaşan randevunuz var.` : `You have ${scheduled} upcoming appointment(s) scheduled for today.`);
+                    }
+                    return lang === "ar" ? "لا توجد مواعيد متبقية لليوم." : (lang === "tr" ? "Bugün için başka randevu kalmadı." : "No more appointments left for today.");
+                  })()}
+                </p>
+              </div>
+            </div>
+          )}
+
+        </div>
+
+      </div>
     </div>
   );
 }

@@ -47,6 +47,16 @@ export function LanguageProvider({ children, initialCurrency }: { children: Reac
       } else {
         document.cookie = `lang=en; path=/; max-age=31536000; SameSite=Lax`;
       }
+
+      const offset = new Date().getTimezoneOffset().toString();
+      const existingOffset = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("timezone-offset="))
+        ?.split("=")[1];
+      if (existingOffset !== offset) {
+        document.cookie = `timezone-offset=${offset}; path=/; max-age=31536000; SameSite=Lax`;
+      }
+
       setMounted(true);
     });
 
