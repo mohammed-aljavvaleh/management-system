@@ -1013,13 +1013,10 @@ export function AppointmentsClient({
                           {/* Left section: Time and initials avatar */}
                           <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "1 1 200px" }}>
                             {/* Time slot */}
-                            <div style={{ display: "flex", flexDirection: "column", minWidth: 70 }}>
-                              <span style={{ fontSize: 14.5, fontWeight: 600, color: "var(--foreground)", display: "flex", alignItems: "center", gap: 4 }}>
+                            <div style={{ display: "flex", flexDirection: "column", minWidth: 110 }}>
+                              <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--foreground)", display: "flex", alignItems: "center", gap: 4 }}>
                                 <Clock size={12} style={{ opacity: 0.6 }} />
-                                {format(new Date(appt.startTime), "HH:mm")}
-                              </span>
-                              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                                {appt.service.duration} {t.appointments.minutes ?? "mins"}
+                                {`${format(new Date(appt.startTime), "HH:mm")}–${format(new Date(new Date(appt.startTime).getTime() + appt.service.duration * 60000), "HH:mm")}`}
                               </span>
                             </div>
 
