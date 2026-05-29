@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     const apptEnd = new Date(apptStart.getTime() + service.duration * 60 * 1000);
     const maxDuration = longestService?.duration ?? 120;
 
-    const conflict = await prisma.appointment.findFirst({
+    const conflicts = await prisma.appointment.findMany({
       where: {
         salonId,
         staffId,
@@ -108,16 +108,18 @@ export async function POST(req: NextRequest) {
       include: { service: true },
     });
 
-    if (conflict) {
+    const hasConflict = conflicts.some((conflict) => {
       const conflictEnd = new Date(
         conflict.startTime.getTime() + conflict.service.duration * 60 * 1000
       );
-      if (conflict.startTime < apptEnd && conflictEnd > apptStart) {
-        return NextResponse.json(
-          { error: t.apiErrors.staffTimeConflict },
-          { status: 409 }
-        );
-      }
+      return conflict.startTime < apptEnd && conflictEnd > apptStart;
+    });
+
+    if (hasConflict) {
+      return NextResponse.json(
+        { error: t.apiErrors.staffTimeConflict },
+        { status: 409 }
+      );
     }
     // ─────────────────────────────────────────────────────────────────
 
@@ -185,7 +187,7 @@ export async function POST(req: NextRequest) {
           staffId,
           salonId,
           status: "SCHEDULED",
-          priceAtBooking: paidNow,
+          priceAtBooking: Math.round((totalPrice / sessionCount) * 100) / 100,
           userPackageId: pkg.id,
         },
         include: { service: true, staff: true, customer: true, userPackage: true },

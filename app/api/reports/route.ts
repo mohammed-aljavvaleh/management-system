@@ -27,11 +27,20 @@ export async function GET(req: NextRequest) {
       startDate.setHours(0, 0, 0, 0);
     }
 
-    const appointments = await prisma.appointment.findMany({
-      where: { salonId, startTime: { gte: startDate }, status: "COMPLETED" },
-      include: { service: true, staff: true },
-      orderBy: { startTime: "asc" },
-    });
+    const [appointments, installments] = await Promise.all([
+      prisma.appointment.findMany({
+        where: { salonId, startTime: { gte: startDate }, status: "COMPLETED" },
+        include: { service: true, staff: true },
+        orderBy: { startTime: "asc" },
+      }),
+      prisma.installment.findMany({
+        where: {
+          userPackage: { salonId },
+          paidAt: { gte: startDate }
+        },
+        orderBy: { paidAt: "asc" },
+      })
+    ]);
 
     // Revenue by day
     const byDay: Record<string, { count: number; revenue: number }> = {};
@@ -39,7 +48,15 @@ export async function GET(req: NextRequest) {
       const dayKey = appt.startTime.toISOString().slice(0, 10);
       if (!byDay[dayKey]) byDay[dayKey] = { count: 0, revenue: 0 };
       byDay[dayKey].count++;
-      byDay[dayKey].revenue += appt.priceAtBooking;
+      if (!appt.userPackageId) {
+        byDay[dayKey].revenue += appt.priceAtBooking;
+      }
+    }
+
+    for (const inst of installments) {
+      const dayKey = inst.paidAt.toISOString().slice(0, 10);
+      if (!byDay[dayKey]) byDay[dayKey] = { count: 0, revenue: 0 };
+      byDay[dayKey].revenue += inst.amount;
     }
 
     // Top services
@@ -59,7 +76,11 @@ export async function GET(req: NextRequest) {
       staffMap[stid].count++;
     }
 
-    const totalRevenue = appointments.reduce((s: number, a: typeof appointments[0]) => s + a.priceAtBooking, 0);
+    const standardRevenue = appointments
+      .filter((a) => !a.userPackageId)
+      .reduce((s, a) => s + a.priceAtBooking, 0);
+    const installmentRevenue = installments.reduce((s, inst) => s + inst.amount, 0);
+    const totalRevenue = standardRevenue + installmentRevenue;
     const totalCount = appointments.length;
 
     // Cancelled count

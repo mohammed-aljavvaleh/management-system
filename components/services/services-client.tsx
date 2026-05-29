@@ -1,10 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Pencil, Trash2, Clock, X, Scissors, TurkishLira, SaudiRiyal } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Pencil, Trash2, Clock, X, Scissors, TurkishLira, SaudiRiyal, Award } from "lucide-react";
 import { useLang, CurrencySymbol, Price } from "@/components/providers/language-provider";
 
-type Service = { id: string; name: string; price: number; duration: number };
+type Service = {
+  id: string;
+  name: string;
+  price: number;
+  duration: number;
+  _count?: { appointments: number };
+};
 
 export function ServicesClient({ initialServices }: { initialServices: Service[] }) {
   const { t, currency } = useLang();
@@ -18,6 +24,22 @@ export function ServicesClient({ initialServices }: { initialServices: Service[]
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [duration, setDuration] = useState("");
+
+  useEffect(() => {
+    const mainEl = document.querySelector("main");
+    const originalOverflow = mainEl ? mainEl.style.overflow : "";
+    const originalBodyOverflow = document.body.style.overflow;
+
+    if (showForm) {
+      document.body.style.overflow = "hidden";
+      if (mainEl) mainEl.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      if (mainEl) mainEl.style.overflow = originalOverflow;
+    };
+  }, [showForm]);
 
   function openCreate() {
     setEditId(null);
@@ -99,8 +121,14 @@ export function ServicesClient({ initialServices }: { initialServices: Service[]
     }
   }
 
-  const avgDuration = services.length
-    ? Math.round(services.reduce((s, svc) => s + svc.duration, 0) / services.length)
+  const topService = [...services].sort((a, b) => {
+    const aCount = a._count?.appointments || 0;
+    const bCount = b._count?.appointments || 0;
+    return bCount - aCount;
+  })[0];
+
+  const avgPrice = services.length
+    ? Math.round(services.reduce((s, svc) => s + svc.price, 0) / services.length)
     : 0;
 
   return (
@@ -119,19 +147,20 @@ export function ServicesClient({ initialServices }: { initialServices: Service[]
       </div>
 
       {/* Stats */}
-      <div className="admin-stats" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
+      <div className="admin-stats" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
         {[
           { label: t.services.total, value: services.length.toString(), icon: Scissors, color: "#c9956b" },
-          { label: t.services.duration, value: `${avgDuration} ${t.services.min}`, icon: Clock, color: "#7b9ec9" },
-          { label: t.services.priceRange, value: services.length ? <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Price amount={Math.min(...services.map(s => s.price))} /> – <Price amount={Math.max(...services.map(s => s.price))} /></span> : "—", icon: currency === "TRY" ? TurkishLira : SaudiRiyal, color: "#9ec97b" },
+          { label: t.services.averagePrice, value: services.length ? <Price amount={avgPrice} showDecimals={false} /> : "—", icon: currency === "TRY" ? TurkishLira : SaudiRiyal, color: "#7b9ec9" },
+          { label: t.services.priceRange, value: services.length ? <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><CurrencySymbol /><span>{Math.min(...services.map(s => s.price)).toFixed(0)} – {Math.max(...services.map(s => s.price)).toFixed(0)}</span></span> : "—", icon: currency === "TRY" ? TurkishLira : SaudiRiyal, color: "#9ec97b" },
+          { label: t.services.mostPopular, value: topService && (topService._count?.appointments || 0) > 0 ? topService.name : "—", icon: Award, color: "#c97bb5" },
         ].map((stat) => (
-          <div key={stat.label} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 10, background: stat.color + "18", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div key={stat.label} className="horizontal-stat-card">
+            <div className="horizontal-stat-icon-box" style={{ background: stat.color + "18" }}>
               <stat.icon size={17} color={stat.color} />
             </div>
-            <div>
-              <div style={{ fontSize: 20, fontFamily: "var(--font-display)", fontWeight: 600 }}>{stat.value}</div>
-              <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{stat.label}</div>
+            <div className="horizontal-stat-info">
+              <div className="horizontal-stat-value">{stat.value}</div>
+              <div className="horizontal-stat-label">{stat.label}</div>
             </div>
           </div>
         ))}
@@ -149,43 +178,41 @@ export function ServicesClient({ initialServices }: { initialServices: Service[]
           {services.map((svc, i) => (
             <div
               key={svc.id}
-              className="animate-fade-in"
+              className="animate-fade-in service-item-card"
               style={{
                 animationDelay: `${i * 30}ms`,
-                background: "var(--card)",
-                border: "1px solid var(--border)",
-                borderRadius: 12,
-                padding: "20px 22px",
                 opacity: loadingId === svc.id ? 0.5 : 1,
-                position: "relative",
-                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
               }}
             >
               {/* Accent bar */}
               <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "linear-gradient(90deg, var(--primary), var(--accent))" }} />
 
-              <div style={{ marginTop: 4 }}>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 500, marginBottom: 6 }}>
-                  {svc.name}
-                </h3>
-                <div style={{ display: "flex", gap: 14, color: "var(--muted-foreground)", fontSize: 13, marginBottom: 16 }}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <div style={{ marginTop: 4, display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                    <h3 style={{ fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 500, margin: 0, wordBreak: "break-word" }}>
+                      {svc.name}
+                    </h3>
+                    <span style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--primary)", fontWeight: 600, fontSize: 15, whiteSpace: "nowrap" }}>
+                      <Price amount={svc.price} />
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--muted-foreground)", fontSize: 13, marginTop: 6, marginBottom: 16 }}>
                     <Clock size={13} />{svc.duration} {t.services.min}
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--primary)", fontWeight: 600 }}>
-                    <Price amount={svc.price} />
-                  </span>
+                  </div>
                 </div>
-                <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
                   <button
                     onClick={() => openEdit(svc)}
-                    style={{ ...smallBtnStyle, color: "var(--foreground)" }}
+                    style={{ ...smallBtnStyle, color: "var(--foreground)", flex: 1, justifyContent: "center" }}
                   >
                     <Pencil size={12} /> {t.common.edit}
                   </button>
                   <button
                     onClick={() => handleDelete(svc.id)}
-                    style={{ ...smallBtnStyle, color: "var(--destructive)" }}
+                    style={{ ...smallBtnStyle, color: "var(--destructive)", flex: 1, justifyContent: "center" }}
                   >
                     <Trash2 size={12} /> {t.common.delete}
                   </button>
@@ -204,6 +231,9 @@ export function ServicesClient({ initialServices }: { initialServices: Service[]
             display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100,
           }}
           onClick={(e) => e.target === e.currentTarget && closeForm()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
         >
             <div
               className="animate-scale-in admin-modal"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   format,
   startOfMonth,
@@ -19,12 +19,16 @@ import {
   Clock,
   CalendarClock,
   FileText,
+  Banknote,
+  CreditCard,
+  SlidersHorizontal,
 } from "lucide-react";
 import Link from "next/link";
 import { useLang, CurrencySymbol, Price } from "@/components/providers/language-provider";
 import { ar } from "date-fns/locale/ar";
 import { tr } from "date-fns/locale/tr";
 import { enUS } from "date-fns/locale/en-US";
+import { Avatar } from "@/components/ui/avatar";
 
 type Service = { id: string; name: string; price: number; duration: number };
 type Staff = { id: string; name: string; role: string };
@@ -34,6 +38,8 @@ type UserPackage = {
   name: string;
   remainingSessions: number;
   totalSessions: number;
+  totalPrice?: number;
+  paidAmount?: number;
 } | null;
 
 type Appointment = {
@@ -48,6 +54,7 @@ type Appointment = {
   priceAtBooking: number;
   notes?: string | null;
   userPackage?: UserPackage;
+  paymentMethod?: string | null;
 };
 
 type Props = {
@@ -76,13 +83,43 @@ function PostponeDialog({
   const [notes, setNotes] = useState(appt.notes ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [openingHour, setOpeningHour] = useState("09:00");
+  const [closingHour, setClosingHour] = useState("18:00");
 
-  const TIME_SLOTS = useMemo(() => [
-    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
-    "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
-    "20:00", "20:30", "21:00", "21:30", "22:00",
-  ], []);
+  useEffect(() => {
+    const mainEl = document.querySelector("main");
+    const originalOverflow = mainEl ? mainEl.style.overflow : "";
+    const originalBodyOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    if (mainEl) mainEl.style.overflow = "hidden";
+
+    let active = true;
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!active) return;
+        if (data?.salon) {
+          if (data.salon.openingHour) setOpeningHour(data.salon.openingHour);
+          if (data.salon.closingHour) setClosingHour(data.salon.closingHour);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+      document.body.style.overflow = originalBodyOverflow;
+      if (mainEl) mainEl.style.overflow = originalOverflow;
+    };
+  }, []);
+
+  const TIME_SLOTS = useMemo(() => {
+    const allSlots = Array.from({ length: 48 }).map((_, i) => {
+      const h = String(Math.floor(i / 2)).padStart(2, "0");
+      const m = i % 2 === 0 ? "00" : "30";
+      return `${h}:${m}`;
+    });
+    return allSlots.filter((slot) => slot >= openingHour && slot <= closingHour);
+  }, [openingHour, closingHour]);
 
   const timeOptions = useMemo(() => {
     if (timeStr && !TIME_SLOTS.includes(timeStr)) {
@@ -115,7 +152,13 @@ function PostponeDialog({
   }
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
+    <div
+      style={overlayStyle}
+      onClick={onClose}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+    >
       <div className="admin-modal" style={dialogStyle} onClick={(e) => e.stopPropagation()}>
         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
           {t.appointments.postponeAppt}
@@ -197,6 +240,20 @@ function NotesDialog({
   const [notes, setNotes] = useState(appt.notes ?? "");
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    const mainEl = document.querySelector("main");
+    const originalOverflow = mainEl ? mainEl.style.overflow : "";
+    const originalBodyOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    if (mainEl) mainEl.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      if (mainEl) mainEl.style.overflow = originalOverflow;
+    };
+  }, []);
+
   async function handleSave() {
     setSaving(true);
     try {
@@ -216,7 +273,13 @@ function NotesDialog({
   }
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
+    <div
+      style={overlayStyle}
+      onClick={onClose}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+    >
       <div className="admin-modal" style={dialogStyle} onClick={(e) => e.stopPropagation()}>
         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
           {t.appointments.ApptNote}
@@ -263,6 +326,20 @@ function EditPriceDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    const mainEl = document.querySelector("main");
+    const originalOverflow = mainEl ? mainEl.style.overflow : "";
+    const originalBodyOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    if (mainEl) mainEl.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      if (mainEl) mainEl.style.overflow = originalOverflow;
+    };
+  }, []);
+
   async function handleSave() {
     const newPrice = Number(price);
     if (isNaN(newPrice) || newPrice < 0) {
@@ -293,7 +370,13 @@ function EditPriceDialog({
   }
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
+    <div
+      style={overlayStyle}
+      onClick={onClose}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+    >
       <div className="admin-modal" style={dialogStyle} onClick={(e) => e.stopPropagation()}>
         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
           {t.appointments.editPrice ?? "Edit Price"}
@@ -342,6 +425,27 @@ function EditPriceDialog({
   );
 }
 
+function getDateHeader(dateStr: string, t: any, lang: string) {
+  const date = new Date(dateStr);
+  const today = new Date();
+  const tomorrow = new Date();
+  tomorrow.setDate(today.getDate() + 1);
+
+  const todayKey = format(today, "yyyy-MM-dd");
+  const tomorrowKey = format(tomorrow, "yyyy-MM-dd");
+
+  if (dateStr === todayKey) {
+    return t.appointments.today ?? "Today";
+  }
+  if (dateStr === tomorrowKey) {
+    return t.appointments.tomorrow ?? "Tomorrow";
+  }
+
+  return format(date, "EEEE, d MMMM yyyy", {
+    locale: lang === "ar" ? ar : (lang === "tr" ? tr : enUS),
+  });
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export function AppointmentsClient({
@@ -363,12 +467,15 @@ export function AppointmentsClient({
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [filterStaff, setFilterStaff] = useState("ALL");
+  const [filterDateRange, setFilterDateRange] = useState("ALL");
+  const [showFilters, setShowFilters] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   // Dialog state
   const [postponeAppt, setPostponeAppt] = useState<Appointment | null>(null);
   const [notesAppt, setNotesAppt] = useState<Appointment | null>(null);
   const [priceAppt, setPriceAppt] = useState<Appointment | null>(null);
+  const [paymentPromptAppt, setPaymentPromptAppt] = useState<Appointment | null>(null);
 
   const days = eachDayOfInterval({
     start: startOfMonth(currentMonth),
@@ -400,21 +507,74 @@ export function AppointmentsClient({
       a.service.name.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === "ALL" || a.status === filterStatus;
     const matchStaff = filterStaff === "ALL" || a.staffId === filterStaff;
-    return matchSearch && matchStatus && matchStaff;
+
+    let matchDate = true;
+    if (filterDateRange !== "ALL") {
+      const apptDate = new Date(a.startTime);
+      const today = new Date();
+
+      const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+
+      if (filterDateRange === "TODAY") {
+        matchDate = apptDate >= startOfToday && apptDate <= endOfToday;
+      } else if (filterDateRange === "TOMORROW") {
+        const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
+        const endOfTomorrow = new Date(endOfToday.getTime() + 24 * 60 * 60 * 1000);
+        matchDate = apptDate >= startOfTomorrow && apptDate <= endOfTomorrow;
+      } else if (filterDateRange === "THIS_WEEK") {
+        const dayOfWeek = today.getDay(); // 0 is Sunday
+        const startOfWeek = new Date(startOfToday.getTime() - dayOfWeek * 24 * 60 * 60 * 1000);
+        const endOfWeek = new Date(startOfWeek.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
+        matchDate = apptDate >= startOfWeek && apptDate <= endOfWeek;
+      } else if (filterDateRange === "THIS_MONTH") {
+        const startOfMonthDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        const endOfMonthDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+        matchDate = apptDate >= startOfMonthDate && apptDate <= endOfMonthDate;
+      }
+    }
+
+    return matchSearch && matchStatus && matchStaff && matchDate;
   })
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
-  async function updateStatus(id: string, status: string) {
+  const groupedAppointments = useMemo(() => {
+    const groups: Record<string, Appointment[]> = {};
+    for (const appt of filteredList) {
+      const dateKey = format(new Date(appt.startTime), "yyyy-MM-dd");
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(appt);
+    }
+    return groups;
+  }, [filteredList]);
+
+  async function updateStatus(id: string, status: string, paymentMethod?: string) {
+    if (status === "COMPLETED" && !paymentMethod) {
+      const appt = appointments.find((a) => a.id === id);
+      if (appt) {
+        if (appt.userPackage) {
+          // Package session: bypass cash/card prompt
+        } else {
+          setPaymentPromptAppt(appt);
+          return;
+        }
+      }
+    }
+
+
     setLoadingId(id);
     try {
       const res = await fetch(`/api/appointments/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, paymentMethod: paymentMethod || null }),
       });
       if (res.ok) {
+        const updated = await res.json();
         setAppointments((prev) =>
-          prev.map((a) => (a.id === id ? { ...a, status } : a))
+          prev.map((a) => (a.id === id ? { ...a, status, paymentMethod: updated.paymentMethod } : a))
         );
       }
     } finally {
@@ -487,6 +647,16 @@ export function AppointmentsClient({
           onSaved={handlePriceSaved}
         />
       )}
+      {paymentPromptAppt && (
+        <PaymentPromptDialog
+          appt={paymentPromptAppt}
+          onClose={() => setPaymentPromptAppt(null)}
+          onConfirm={(method) => {
+            updateStatus(paymentPromptAppt.id, "COMPLETED", method);
+            setPaymentPromptAppt(null);
+          }}
+        />
+      )}
 
       {/* Header */}
       <div className="admin-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
@@ -542,7 +712,7 @@ export function AppointmentsClient({
       </div>
 
       {view === "calendar" ? (
-        <div className="admin-calendar-layout" style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 20 }}>
+        <div className="admin-calendar-layout" style={{ display: "grid", gridTemplateColumns: "minmax(340px, 1fr) minmax(340px, 480px)", gap: 20 }}>
           {/* Calendar grid */}
           <div className="admin-calendar-scroll" style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, overflowX: "auto", overflowY: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -638,8 +808,8 @@ export function AppointmentsClient({
           </div>
 
           {/* Day detail panel */}
-          <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
               <h3 style={{ fontSize: 14, fontWeight: 600 }}>
                 {selectedDate && format(selectedDate, "EEEE d MMMM", { locale: lang === "ar" ? ar : (lang === "tr" ? tr : enUS) })}
               </h3>
@@ -647,7 +817,7 @@ export function AppointmentsClient({
                 {selectedDayAppts.length} {selectedDayAppts.length !== 1 ? t.appointments.appointments : t.appointments.appointment}
               </p>
             </div>
-            <div className="admin-day-panel" style={{ overflowY: "auto", maxHeight: 500 }}>
+            <div className="admin-day-panel" style={{ overflowY: "auto", flex: 1, maxHeight: 620 }}>
               {selectedDayAppts.length === 0 ? (
                 <div style={{ padding: "32px 20px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
                   {t.appointments.noAppointments}
@@ -673,13 +843,14 @@ export function AppointmentsClient({
         /* List view */
         <div>
           {/* Filters */}
-          <div className="admin-filter-row" style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-            <div className="admin-search" style={{ position: "relative", flex: 1, maxWidth: 300 }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: showFilters ? 12 : 20, alignItems: "center" }}>
+            {/* Search */}
+            <div className="admin-search" style={{ position: "relative", flex: 1 }}>
               <Search
                 size={14}
                 style={{
                   position: "absolute",
-                  left: 10,
+                  left: 12,
                   top: "50%",
                   transform: "translateY(-50%)",
                   color: "var(--muted-foreground)",
@@ -689,172 +860,362 @@ export function AppointmentsClient({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t.appointments.searchPlaceholder}
-                style={{ ...listInputStyle, paddingLeft: 32, width: "100%" }}
+                style={{ ...listInputStyle, paddingLeft: 34, paddingRight: 12, width: "100%", height: 38, boxSizing: "border-box" }}
               />
             </div>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              style={listInputStyle}
+
+            {/* Mobile Filters Toggle Button */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                height: 38,
+                padding: "0 14px",
+                borderRadius: 8,
+                border: "1px solid var(--border)",
+                background: showFilters ? "var(--primary-light)" : "var(--card)",
+                color: showFilters ? "var(--primary)" : "var(--foreground)",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 500,
+                flexShrink: 0
+              }}
+              className="mobile-filter-toggle"
             >
-              <option value="ALL">{t.appointments.allStatus}</option>
-              <option value="SCHEDULED">{t.appointments.statuses.scheduled}</option>
-              <option value="COMPLETED">{t.appointments.statuses.completed}</option>
-              <option value="CANCELLED">{t.appointments.statuses.cancelled}</option>
-            </select>
-            <select
-              value={filterStaff}
-              onChange={(e) => setFilterStaff(e.target.value)}
-              style={listInputStyle}
-            >
-              <option value="ALL">{t.appointments.allStaff}</option>
-              {staff.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+              <SlidersHorizontal size={14} />
+              <span>{t.appointments.dateFilter ?? "Filters"}</span>
+            </button>
           </div>
 
-          <div className="admin-scroll-x" style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, overflowX: "auto", overflowY: "hidden" }}>
-            {/* Table header */}
-            <div
-              className="admin-appointment-table"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "120px 1fr 140px 140px 90px 100px 180px",
-                padding: "10px 18px",
-                borderBottom: "1px solid var(--border)",
-                fontSize: 11,
-                fontWeight: 600,
-                color: "var(--muted-foreground)",
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-              }}
-            >
-              <span>{t.appointments.time}</span>
-              <span>{t.appointments.customer}</span>
-              <span>{t.appointments.service}</span>
-              <span>{t.appointments.staffCol}</span>
-              <span>{t.appointments.duration}</span>
-              <span>{t.appointments.price}</span>
-              <span>{t.common.actions}</span>
+          {/* Collapsible Dropdowns Panel */}
+          <div className={`filters-dropdown-panel ${showFilters ? "show" : ""}`}>
+            <div style={{
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+              marginBottom: 20,
+            }}>
+              {/* Date Range Select */}
+              <select
+                value={filterDateRange}
+                onChange={(e) => setFilterDateRange(e.target.value)}
+                style={{ ...listInputStyle, height: 38, flex: "1 1 120px" }}
+              >
+                <option value="ALL">{t.appointments.allDates ?? "All Dates"}</option>
+                <option value="TODAY">{t.appointments.today ?? "Today"}</option>
+                <option value="TOMORROW">{t.appointments.tomorrow ?? "Tomorrow"}</option>
+                <option value="THIS_WEEK">{t.appointments.thisWeek ?? "This Week"}</option>
+                <option value="THIS_MONTH">{t.appointments.thisMonth ?? "This Month"}</option>
+              </select>
+
+              {/* Status Select */}
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                style={{ ...listInputStyle, height: 38, flex: "1 1 120px" }}
+              >
+                <option value="ALL">{t.appointments.allStatus}</option>
+                <option value="SCHEDULED">{t.appointments.statuses.scheduled}</option>
+                <option value="COMPLETED">{t.appointments.statuses.completed}</option>
+                <option value="CANCELLED">{t.appointments.statuses.cancelled}</option>
+              </select>
+
+              {/* Staff Select */}
+              <select
+                value={filterStaff}
+                onChange={(e) => setFilterStaff(e.target.value)}
+                style={{ ...listInputStyle, height: 38, flex: "1 1 120px" }}
+              >
+                <option value="ALL">{t.appointments.allStaff}</option>
+                {staff.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
             </div>
+          </div>
+
+          {/* Timeline list of cards */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {filteredList.length === 0 ? (
-              <div style={{ padding: "40px", textAlign: "center", color: "var(--muted-foreground)" }}>
-                {t.appointments.noFound}
+              <div style={{ padding: "60px 40px", textAlign: "center", background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, color: "var(--muted-foreground)" }}>
+                <Calendar size={32} style={{ margin: "0 auto 12px", opacity: 0.4, color: "var(--muted-foreground)" }} />
+                <p>{t.appointments.noFound}</p>
               </div>
             ) : (
-              filteredList.map((appt, i) => (
-                <div
-                  className="admin-appointment-table"
-                  key={appt.id}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "120px 1fr 140px 140px 90px 100px 180px",
-                    padding: "12px 18px",
-                    borderBottom: i < filteredList.length - 1 ? "1px solid var(--border)" : "none",
+              Object.keys(groupedAppointments).map((dateKey) => (
+                <div key={dateKey} style={{ marginBottom: 12 }}>
+                  {/* Group Date Header */}
+                  <div style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: "var(--muted-foreground)",
+                    marginTop: 20,
+                    marginBottom: 12,
+                    paddingBottom: 6,
+                    borderBottom: "1px solid var(--border)",
+                    display: "flex",
                     alignItems: "center",
-                    fontSize: 13.5,
-                  }}
-                >
-                  <span style={{ fontWeight: 500 }}>
-                    {format(new Date(appt.startTime), "dd MMMM, HH:mm", { locale: lang === "ar" ? ar : (lang === "tr" ? tr : enUS) })}
-                  </span>
-                  <div>
-                    <div style={{ fontWeight: 500 }}>{appt.customer.name}</div>
-                    {appt.customer.phone && (
-                      <div style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>
-                        {appt.customer.phone}
-                      </div>
-                    )}
-                    {appt.notes && (
-                      <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", fontStyle: "italic", marginTop: 2 }}>
-                        {appt.notes}
-                      </div>
-                    )}
+                    gap: 8
+                  }}>
+                    <Calendar size={14} style={{ color: "var(--primary)" }} />
+                    <span>{getDateHeader(dateKey, t, lang)}</span>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 500,
+                      background: "var(--muted)",
+                      color: "var(--muted-foreground)",
+                      padding: "2px 8px",
+                      borderRadius: 10,
+                      marginInlineStart: "auto"
+                    }}>
+                      {groupedAppointments[dateKey].length} {groupedAppointments[dateKey].length === 1 ? t.appointments.appointment : t.appointments.appointments}
+                    </span>
                   </div>
-                  <span>{appt.service.name}</span>
-                  <span>{appt.staff.name}</span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--muted-foreground)", fontSize: 12.5 }}>
-                    <Clock size={12} />
-                    {appt.service.duration}
-                    {t.services.min}
-                  </span>
-                  <span style={{ color: "var(--primary)", fontWeight: 500 }}>
-                    <Price amount={appt.priceAtBooking != null ? appt.priceAtBooking : appt.service.price} />
-                  </span>
-                  <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
-                    {/* Status select */}
-                    <select
-                      value={appt.status}
-                      onChange={(e) => updateStatus(appt.id, e.target.value)}
-                      disabled={loadingId === appt.id}
-                      style={{
-                        padding: "3px 6px",
-                        borderRadius: 6,
-                        border: "1px solid var(--border)",
-                        fontSize: 12,
-                        background: "var(--muted)",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <option value="SCHEDULED">{t.appointments.statuses.scheduled}</option>
-                      <option value="COMPLETED">{t.appointments.statuses.completed}</option>
-                      <option value="CANCELLED">{t.appointments.statuses.cancelled}</option>
-                    </select>
 
-                    {/* Postpone button — only for SCHEDULED */}
-                    {appt.status === "SCHEDULED" && (
-                      <button
-                        title="Postpone"
-                        onClick={() => setPostponeAppt(appt)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          color: "var(--muted-foreground)",
-                          display: "flex",
-                          alignItems: "center",
-                          padding: 2,
-                        }}
-                      >
-                        <CalendarClock size={15} />
-                      </button>
-                    )}
+                  {/* Appointments in this Day */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {groupedAppointments[dateKey].map((appt) => {
+                      const statusLabel: Record<string, string> = {
+                        SCHEDULED: t.appointments.statuses.scheduled,
+                        COMPLETED: t.appointments.statuses.completed,
+                        CANCELLED: t.appointments.statuses.cancelled,
+                      };
 
-                    {/* Notes button */}
-                    <button
-                      title={appt.notes ? t.appointments.editNote : t.appointments.addNote}
-                      onClick={() => setNotesAppt(appt)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        color: appt.notes ? "var(--primary)" : "var(--muted-foreground)",
-                        display: "flex",
-                        alignItems: "center",
-                        padding: 2,
-                      }}
-                    >
-                      <FileText size={15} />
-                    </button>
+                      return (
+                        <div
+                          key={appt.id}
+                          className="appointment-timeline-card"
+                          style={{
+                            display: "flex",
+                            background: "var(--card)",
+                            border: "1px solid var(--border)",
+                            borderInlineStart: `4px solid ${appt.status === "COMPLETED"
+                                ? "#2d7a2d"
+                                : appt.status === "CANCELLED"
+                                  ? "#a01a1a"
+                                  : "var(--primary)"
+                              }`,
+                            borderRadius: 10,
+                            padding: "14px 18px",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.01)",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            position: "relative",
+                            opacity: loadingId === appt.id ? 0.6 : 1,
+                            flexWrap: "wrap",
+                            gap: 12
+                          }}
+                        >
+                          {/* Left section: Time and initials avatar */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "1 1 200px" }}>
+                            {/* Time slot */}
+                            <div style={{ display: "flex", flexDirection: "column", minWidth: 110 }}>
+                              <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--foreground)", display: "flex", alignItems: "center", gap: 4 }}>
+                                <Clock size={12} style={{ opacity: 0.6 }} />
+                                {`${format(new Date(appt.startTime), "HH:mm")}–${format(new Date(new Date(appt.startTime).getTime() + appt.service.duration * 60000), "HH:mm")}`}
+                              </span>
+                            </div>
 
-                    {/* Delete */}
-                    <button
-                      onClick={() => deleteAppt(appt.id)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        color: "var(--muted-foreground)",
-                        fontSize: 16,
-                        lineHeight: 1,
-                        padding: 2,
-                      }}
-                    >
-                      ×
-                    </button>
+                            {/* Circular dynamic avatar */}
+                            <Avatar name={appt.customer.name} size={36} />
+
+                            {/* Customer details */}
+                            <div style={{ display: "flex", flexDirection: "column" }}>
+                              <span style={{ fontWeight: 600, fontSize: 14, color: "var(--foreground)" }}>
+                                {appt.customer.name}
+                              </span>
+                              {appt.customer.phone && (
+                                <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>
+                                  {appt.customer.phone}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Center section: Service & Staff */}
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", flex: "1 1 240px" }}>
+                            {/* Service label */}
+                            <span style={{
+                              fontSize: 11.5,
+                              fontWeight: 500,
+                              background: "var(--primary-light)",
+                              color: "var(--primary)",
+                              padding: "3px 8px",
+                              borderRadius: 6
+                            }}>
+                              {appt.service.name}
+                            </span>
+                            {/* Staff label */}
+                            <span style={{
+                              fontSize: 11.5,
+                              color: "var(--secondary-foreground)",
+                              background: "var(--secondary)",
+                              padding: "3px 8px",
+                              borderRadius: 6,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 4
+                            }}>
+                              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--primary)" }} />
+                              {appt.staff.name}
+                            </span>
+
+                            {/* Appt note */}
+                            {appt.notes && (
+                              <span style={{
+                                fontSize: 11,
+                                color: "var(--muted-foreground)",
+                                fontStyle: "italic",
+                                background: "var(--background)",
+                                padding: "2px 8px",
+                                borderRadius: 6,
+                                borderInlineStart: "2px solid var(--border)",
+                                maxWidth: "200px",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap"
+                              }} title={appt.notes}>
+                                {appt.notes}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Right section: Price, status, and actions */}
+                          <div style={{ display: "flex", alignItems: "center", justifySelf: "flex-end", gap: 14, flexWrap: "wrap", marginInlineStart: "auto" }}>
+                            {/* Price and Status pill */}
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3 }}>
+                              <span style={{ fontSize: 14.5, fontWeight: 600, color: "var(--primary)" }}>
+                                <Price amount={appt.priceAtBooking != null ? appt.priceAtBooking : appt.service.price} />
+                              </span>
+                              <span
+                                className={`status-${appt.status.toLowerCase()}`}
+                                style={{
+                                  padding: "2px 8px",
+                                  borderRadius: 10,
+                                  fontSize: 10.5,
+                                  fontWeight: 500,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 4
+                                }}
+                              >
+                                {appt.status === "SCHEDULED" && <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#1a6fa0", display: "inline-block" }} />}
+                                {appt.status === "COMPLETED" && <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#2d7a2d", display: "inline-block" }} />}
+                                {appt.status === "CANCELLED" && <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#a01a1a", display: "inline-block" }} />}
+                                {statusLabel[appt.status] ?? appt.status.toLowerCase()}
+                                {appt.userPackage ? (
+                                  appt.userPackage.totalPrice != null &&
+                                  appt.userPackage.paidAmount != null &&
+                                  appt.userPackage.paidAmount >= appt.userPackage.totalPrice ?
+                                    ` (${t.customers.packageBadge} - ${t.appointments.fullyPaid})` :
+                                    ` (${t.customers.packageBadge})`
+                                ) : (
+                                  appt.status === "COMPLETED" && appt.paymentMethod && ` (${appt.paymentMethod === "CASH" ? t.appointments.cash : t.appointments.card})`
+                                )}
+                              </span>
+                              {appt.userPackage && (
+                                <span style={{
+                                  fontSize: 10,
+                                  color: "var(--muted-foreground)",
+                                  background: "var(--muted)",
+                                  padding: "1px 5px",
+                                  borderRadius: 4,
+                                  marginTop: 1
+                                }}>
+                                  {t.customers.packageBadge ?? "Package"}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Actions block */}
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                              {/* Quick status change controls */}
+                              {appt.status === "SCHEDULED" ? (
+                                <>
+                                  <button
+                                    onClick={() => updateStatus(appt.id, "COMPLETED")}
+                                    disabled={loadingId === appt.id}
+                                    style={{ ...smallBtnStyle, color: "#2d7a2d", background: "#e8f5e8", display: "flex", alignItems: "center", gap: 4 }}
+                                    className="action-btn"
+                                  >
+                                    <span style={{ fontWeight: 600 }}>✓</span> {t.appointments.complete}
+                                  </button>
+                                  <button
+                                    onClick={() => updateStatus(appt.id, "CANCELLED")}
+                                    disabled={loadingId === appt.id}
+                                    style={{ ...smallBtnStyle, color: "#a01a1a", background: "#fde8e8", display: "flex", alignItems: "center", gap: 4 }}
+                                    className="action-btn"
+                                  >
+                                    <span style={{ fontSize: 14 }}>×</span> {t.common.cancel}
+                                  </button>
+                                  <button
+                                    onClick={() => setPostponeAppt(appt)}
+                                    disabled={loadingId === appt.id}
+                                    style={{ ...smallBtnStyle, color: "#5a4a00", background: "#fef9e7", display: "flex", alignItems: "center", gap: 4 }}
+                                    className="action-btn"
+                                  >
+                                    <CalendarClock size={12} /> {t.appointments.postpone}
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => updateStatus(appt.id, "SCHEDULED")}
+                                  disabled={loadingId === appt.id}
+                                  style={{ ...smallBtnStyle, color: "var(--muted-foreground)", background: "var(--muted)", display: "flex", alignItems: "center", gap: 4 }}
+                                  className="action-btn"
+                                >
+                                  <Clock size={12} /> {t.appointments.statuses.scheduled}
+                                </button>
+                              )}
+
+                              {/* Price Edit button */}
+                              {appt.status === "SCHEDULED" && !appt.userPackage && (
+                                <button
+                                  onClick={() => setPriceAppt(appt)}
+                                  disabled={loadingId === appt.id}
+                                  style={{ ...smallBtnStyle, color: "var(--primary)", background: "var(--muted)", display: "flex", alignItems: "center", gap: 4 }}
+                                  className="action-btn"
+                                >
+                                  <CurrencySymbol size={12} /> {t.appointments.editPrice ?? "Edit Price"}
+                                </button>
+                              )}
+
+                              {/* Notes button */}
+                              <button
+                                onClick={() => setNotesAppt(appt)}
+                                disabled={loadingId === appt.id}
+                                style={{
+                                  ...smallBtnStyle,
+                                  color: appt.notes ? "var(--primary)" : "var(--muted-foreground)",
+                                  background: appt.notes ? "var(--primary-light)" : "var(--muted)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 4
+                                }}
+                                className="action-btn"
+                              >
+                                <FileText size={12} /> {appt.notes ? t.appointments.editNote : t.appointments.addNote}
+                              </button>
+
+                              {/* Delete button */}
+                              <button
+                                onClick={() => deleteAppt(appt.id)}
+                                disabled={loadingId === appt.id}
+                                style={{ ...smallBtnStyle, color: "var(--destructive)", background: "#fde8e8", display: "flex", alignItems: "center", gap: 4 }}
+                                className="action-btn-danger"
+                              >
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+                                {t.common.delete}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))
@@ -905,7 +1266,7 @@ function AppointmentCard({
         <div>
           <div style={{ fontWeight: 500, fontSize: 13.5 }}>{appt.customer.name}</div>
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-            {format(new Date(appt.startTime), "HH:mm")} · {appt.service.name}
+            {format(new Date(appt.startTime), "HH:mm")}–{format(new Date(new Date(appt.startTime).getTime() + appt.service.duration * 60000), "HH:mm")} · {appt.service.name}
           </div>
           {appt.notes && (
             <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", fontStyle: "italic", marginTop: 3 }}>
@@ -918,6 +1279,17 @@ function AppointmentCard({
           style={{ padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 500 }}
         >
           {statusLabel[appt.status] ?? appt.status.toLowerCase()}
+          {appt.userPackage ? (
+            appt.userPackage.totalPrice != null &&
+            appt.userPackage.paidAmount != null &&
+            appt.userPackage.paidAmount >= appt.userPackage.totalPrice ?
+              ` (${t.customers.packageBadge} - ${t.appointments.fullyPaid})` :
+              ` (${t.customers.packageBadge})`
+          ) : (
+            appt.status === "COMPLETED" && appt.paymentMethod && (
+              ` (${appt.paymentMethod === "CASH" ? t.appointments.cash : t.appointments.card})`
+            )
+          )}
         </span>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -957,7 +1329,7 @@ function AppointmentCard({
           >
             <FileText size={11} /> {appt.notes ? t.appointments.editNote : t.appointments.addNote}
           </button>
-          {appt.status === "SCHEDULED" && (
+          {appt.status === "SCHEDULED" && !appt.userPackage && (
             <button
               onClick={onEditPrice}
               style={{
@@ -1079,3 +1451,131 @@ const primaryBtnStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 500,
 };
+
+// ── PaymentPrompt Dialog ──────────────────────────────────────────────────────
+
+function PaymentPromptDialog({
+  appt,
+  onClose,
+  onConfirm,
+}: {
+  appt: Appointment;
+  onClose: () => void;
+  onConfirm: (method: string) => void;
+}) {
+  const { t, lang } = useLang();
+
+  useEffect(() => {
+    const mainEl = document.querySelector("main");
+    const originalOverflow = mainEl ? mainEl.style.overflow : "";
+    const originalBodyOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    if (mainEl) mainEl.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      if (mainEl) mainEl.style.overflow = originalOverflow;
+    };
+  }, []);
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+        backdropFilter: "blur(4px)", display: "flex", alignItems: "center",
+        justifyContent: "center", zIndex: 1000,
+      }}
+      onClick={onClose}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+    >
+      <div
+        className="animate-scale-in admin-modal"
+        style={{
+          background: "var(--card)", borderRadius: 14, padding: "28px 30px",
+          width: 380, boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Hover translation styling */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+          .payment-opt-btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(0.96);
+          }
+        `}} />
+
+        <h3 style={{ fontFamily: "var(--font-display)", fontSize: 22, margin: "0 0 8px 0", textAlign: lang === "ar" ? "right" : "left" }}>
+          {t.appointments.selectPaymentMethod}
+        </h3>
+        <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", marginBottom: 24, textAlign: lang === "ar" ? "right" : "left" }}>
+          {appt.customer.name} · {appt.service.name} · <Price amount={appt.priceAtBooking} />
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+          {/* Cash Option */}
+          <button
+            onClick={() => onConfirm("CASH")}
+            style={{
+              padding: "20px 16px",
+              background: "var(--primary-light)",
+              border: "1px solid var(--primary)",
+              borderRadius: 10,
+              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 8,
+              transition: "transform 0.15s, background 0.15s",
+            }}
+            className="payment-opt-btn"
+          >
+            <Banknote size={24} color="var(--primary)" />
+            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--primary)" }}>
+              {t.appointments.cash}
+            </span>
+          </button>
+
+          {/* Card Option */}
+          <button
+            onClick={() => onConfirm("CARD")}
+            style={{
+              padding: "20px 16px",
+              background: "var(--primary-light)",
+              border: "1px solid var(--primary)",
+              borderRadius: 10,
+              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 8,
+              transition: "transform 0.15s, background 0.15s",
+            }}
+            className="payment-opt-btn"
+          >
+            <CreditCard size={24} color="var(--primary)" />
+            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--primary)" }}>
+              {t.appointments.card}
+            </span>
+          </button>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: lang === "ar" ? "flex-start" : "flex-end" }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: "8px 16px", background: "var(--muted)",
+              border: "1px solid var(--border)", borderRadius: 8,
+              cursor: "pointer", fontSize: 13, color: "var(--foreground)",
+            }}
+          >
+            {t.common.cancel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -9,6 +9,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { Prisma } from "@/app/generated/prisma";
+import { cookies } from "next/headers";
 
 // ─── Appointments ─────────────────────────────────────────────────────────────
 
@@ -153,11 +154,22 @@ export async function getPackages(salonId: string, customerId?: string) {
 // ─── Dashboard Stats ──────────────────────────────────────────────────────────
 
 export async function getDashboardStats(salonId: string) {
-  const today = new Date();
-  const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-  const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+  const cookieStore = await cookies();
+  const offsetParam = cookieStore.get("timezone-offset")?.value;
+  const offset = offsetParam ? parseInt(offsetParam, 10) : -180;
 
-  const [todayCount, scheduledCount, customerCount, revenueToday] =
+  const now = new Date();
+  const localTimeMs = now.getTime() - offset * 60 * 1000;
+  const localDate = new Date(localTimeMs);
+  localDate.setUTCHours(0, 0, 0, 0);
+
+  const startOfDay = new Date(localDate.getTime() + offset * 60 * 1000);
+
+  const tomorrowLocal = new Date(localDate);
+  tomorrowLocal.setUTCDate(tomorrowLocal.getUTCDate() + 1);
+  const endOfDay = new Date(tomorrowLocal.getTime() + offset * 60 * 1000 - 1);
+
+  const [todayCount, scheduledCount, customerCount, revenueTodayAppointments, revenueTodayInstallments] =
     await Promise.all([
       prisma.appointment.count({
         where: { salonId, startTime: { gte: startOfDay, lte: endOfDay } },
@@ -173,13 +185,20 @@ export async function getDashboardStats(salonId: string) {
         },
         _sum: { priceAtBooking: true },
       }),
+      prisma.installment.aggregate({
+        where: {
+          userPackage: { salonId },
+          paidAt: { gte: startOfDay, lte: endOfDay },
+        },
+        _sum: { amount: true },
+      }),
     ]);
 
   return {
     todayAppointments: todayCount,
     upcomingAppointments: scheduledCount,
     totalCustomers: customerCount,
-    revenueToday: revenueToday._sum.priceAtBooking ?? 0,
+    revenueToday: (revenueTodayAppointments._sum.priceAtBooking ?? 0) + (revenueTodayInstallments._sum.amount ?? 0),
   };
 }
 

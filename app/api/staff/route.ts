@@ -26,10 +26,37 @@ export async function POST(req: NextRequest) {
   const { salonId } = auth.session;
   const t = await getTranslations();
   try {
-    const { name, role } = await req.json();
+    const { name, role, email, phone } = await req.json();
     if (!name) return NextResponse.json({ error: t.apiErrors.nameRequired }, { status: 400 });
+
+    let digits = null;
+    if (phone) {
+      digits = String(phone).replace(/\D/g, "");
+      if (!digits.startsWith("05") || digits.length !== 11) {
+        return NextResponse.json(
+          { error: t.apiErrors.phoneValidation },
+          { status: 400 }
+        );
+      }
+      const existing = await prisma.staff.findFirst({
+        where: { salonId, phone: digits },
+      });
+      if (existing) {
+        return NextResponse.json(
+          { error: t.apiErrors.phoneExists },
+          { status: 400 }
+        );
+      }
+    }
+
     const member = await prisma.staff.create({
-      data: { name, role: role || "Technician", salonId },
+      data: {
+        name,
+        role: role || "Technician",
+        email: email || null,
+        phone: digits,
+        salonId,
+      },
     });
     return NextResponse.json(member, { status: 201 });
   } catch (err) {

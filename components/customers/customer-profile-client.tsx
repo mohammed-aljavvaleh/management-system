@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
 import { Prisma } from "@/app/generated/prisma";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,6 +15,7 @@ import { ar } from "date-fns/locale/ar";
 import { tr } from "date-fns/locale/tr";
 import { enUS } from "date-fns/locale/en-US";
 import { localizePackageName, localizeInstallmentNote, localizeServiceName } from "@/lib/package-utils";
+import { Avatar } from "@/components/ui/avatar";
 
 type CustomerWithDetails = Prisma.CustomerGetPayload<{
   include: {
@@ -75,15 +77,7 @@ export function CustomerProfileClient({
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-          <div style={{
-            width: 56, height: 56, borderRadius: "50%",
-            background: "var(--primary-light)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 22, fontWeight: 700, color: "var(--primary)",
-            flexShrink: 0,
-          }}>
-            {customer.name.charAt(0).toUpperCase()}
-          </div>
+          <Avatar name={customer.name} size={56} fontSize={22} />
           <div>
             <h1 style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 600, margin: 0 }}>
               {customer.name}
@@ -416,7 +410,7 @@ function AppointmentHistoryRow({
           background: "var(--muted)", padding: "7px 11px",
           borderRadius: 6, borderLeft: "2px solid var(--border)",
         }}>
-          📝 {notes}
+          {notes}
         </div>
       )}
 
@@ -607,13 +601,6 @@ type PackageForNextSession = {
   service?: { id: string; name: string; price: number; duration: number } | null;
 };
 
-const TIME_SLOTS = [
-  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-  "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
-  "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
-  "18:00",
-];
-
 function ScheduleNextSessionDialog({
   pkg,
   staffList,
@@ -630,8 +617,10 @@ function ScheduleNextSessionDialog({
   tomorrow.setDate(tomorrow.getDate() + 1);
 
   const [dateStr, setDateStr] = useState(tomorrow.toISOString().slice(0, 10));
-  const [timeStr, setTimeStr] = useState("10:00");
+  const [timeStr, setTimeStr] = useState("");
   const [staffId, setStaffId] = useState(staffList?.[0]?.id ?? "");
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [fetchingSlots, setFetchingSlots] = useState(false);
 
   const balance = Math.max(0, pkg.totalPrice - pkg.paidAmount);
   const isFinalSession = pkg.remainingSessions === 1;
@@ -641,6 +630,60 @@ function ScheduleNextSessionDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    const mainEl = document.querySelector("main");
+    const originalOverflow = mainEl ? mainEl.style.overflow : "";
+    const originalBodyOverflow = document.body.style.overflow;
+
+    if (open) {
+      document.body.style.overflow = "hidden";
+      if (mainEl) mainEl.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      if (mainEl) mainEl.style.overflow = originalOverflow;
+    };
+  }, [open]);
+
+  // Fetch availability dynamically
+  useEffect(() => {
+    if (!staffId || !dateStr || !open) return;
+    const duration = pkg.service?.duration || 30;
+
+    let active = true;
+    async function fetchAvailability() {
+      setFetchingSlots(true);
+      try {
+        const offset = new Date().getTimezoneOffset();
+        const res = await fetch(
+          `/api/staff/${staffId}/availability?date=${dateStr}&duration=${duration}&offset=${offset}`
+        );
+        if (res.ok && active) {
+          const data = await res.json();
+          const slots = data.slots || [];
+          setAvailableSlots(slots);
+
+          // Pre-select the first available slot, or keep selection if it's still available
+          if (slots.length > 0) {
+            setTimeStr((prev) => (prev && slots.includes(prev) ? prev : slots[0]));
+          } else {
+            setTimeStr("");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch staff availability in dialog:", err);
+      } finally {
+        if (active) setFetchingSlots(false);
+      }
+    }
+
+    fetchAvailability();
+    return () => {
+      active = false;
+    };
+  }, [staffId, dateStr, pkg.service?.duration, open]);
 
   async function handleSchedule() {
     if (!staffId || !dateStr || !timeStr) return;
@@ -725,6 +768,9 @@ function ScheduleNextSessionDialog({
             display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
           }}
           onClick={() => !saving && setOpen(false)}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
         >
           <div
             className="admin-modal"
@@ -760,17 +806,28 @@ function ScheduleNextSessionDialog({
                 </div>
                 <div style={{ marginBottom: 14 }}>
                   <label style={labelStyle}>{t.appointmentForm.timeSlot}</label>
-                  <select
-                    value={timeStr}
-                    onChange={(e) => setTimeStr(e.target.value)}
-                    style={fullInputStyle}
-                  >
-                    {TIME_SLOTS.map((slot) => (
-                      <option key={slot} value={slot}>
-                        {slot}
-                      </option>
-                    ))}
-                  </select>
+                  {fetchingSlots ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0" }}>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                      <span style={{ fontSize: 12.5, color: "var(--muted-foreground)" }}>{t.common.searching ?? "Loading slots..."}</span>
+                    </div>
+                  ) : availableSlots.length === 0 ? (
+                    <div style={{ padding: "10px 12px", border: "1.5px dashed var(--border)", borderRadius: 8, background: "var(--muted)", color: "#c45c5c", fontSize: 12.5 }}>
+                      {t.appointmentForm.errors.noAvailableSlots ?? "No available slots on this day"}
+                    </div>
+                  ) : (
+                    <select
+                      value={timeStr}
+                      onChange={(e) => setTimeStr(e.target.value)}
+                      style={fullInputStyle}
+                    >
+                      {availableSlots.map((slot) => (
+                        <option key={slot} value={slot}>
+                          {slot}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div style={{ marginBottom: 14 }}>
                   <label style={labelStyle}>{t.appointmentForm.staffMember}</label>
@@ -829,8 +886,8 @@ function ScheduleNextSessionDialog({
                   </button>
                   <button
                     onClick={handleSchedule}
-                    disabled={saving || !staffId}
-                    style={{ ...primaryBtnStyle, opacity: saving ? 0.7 : 1 }}
+                    disabled={saving || !staffId || !timeStr || availableSlots.length === 0}
+                    style={{ ...primaryBtnStyle, opacity: (saving || !timeStr || availableSlots.length === 0) ? 0.7 : 1 }}
                   >
                     {saving ? t.appointmentForm.scheduling : t.appointmentForm.schedule}
                   </button>
@@ -843,6 +900,7 @@ function ScheduleNextSessionDialog({
     </>
   );
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared styles
