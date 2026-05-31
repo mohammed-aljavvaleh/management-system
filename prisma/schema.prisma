@@ -71,6 +71,8 @@ model Service {
 
   appointments Appointment[]
   packages     UserPackage[]
+
+  @@index([salonId])
 }
 
 model Staff {
@@ -86,6 +88,8 @@ model Staff {
   salon        Salon         @relation(fields: [salonId], references: [id])
 
   appointments Appointment[]
+
+  @@index([salonId])
 }
 
 model UserPackage {
@@ -110,6 +114,9 @@ model UserPackage {
 
   appointments      Appointment[]
   installments      Installment[]
+
+  @@index([salonId])
+  @@index([customerId])
 }
 
 model Installment {
@@ -120,6 +127,8 @@ model Installment {
 
   userPackageId String
   userPackage   UserPackage @relation(fields: [userPackageId], references: [id])
+
+  @@index([userPackageId])
 }
 
 model Appointment {
@@ -146,4 +155,9 @@ model Appointment {
   notes          String?
   status         String      @default("SCHEDULED") // SCHEDULED | CANCELLED | COMPLETED
   paymentMethod  String?     // CASH | CARD
+
+  @@index([salonId, startTime])
+  @@index([salonId, staffId, status, startTime])
+  @@index([customerId])
+  @@index([userPackageId])
 }

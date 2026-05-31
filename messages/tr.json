@@ -39,6 +39,7 @@
     "greeting_afternoon": "İyi günler,",
     "greeting_evening": "İyi akşamlar",
     "todayRevenue": "Bugünkü Gelir",
+    "revenueBreakdown": "Gelir Detayı",
     "appointments": "randevu",
     "upcoming": "Yaklaşan",
     "scheduledFromNow": "planlandı",
@@ -172,6 +173,11 @@
     "fullyPaid": "Tamamen Ödendi"
   },
   "appointmentForm": {
+    "successScheduled": "✓ Başarıyla Planlandı!",
+    "bookingType": "Randevu Türü",
+    "normalAppointment": "Normal Randevu",
+    "packageAppointment": "Paket Seansı",
+    "selectActivePackage": "Aktif Paket Seçin",
     "title": "Yeni Randevu",
     "subtitle": "Randevu oluşturmak için bilgileri doldurun",
     "back": "← Randevulara Dön",

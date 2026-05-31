@@ -48,19 +48,51 @@ export default async function DashboardPage() {
       }),
     ]);
 
-  const standardRevenue = todayAppointments
-    .filter((a) => a.status === "COMPLETED" && !a.userPackageId)
-    .reduce((s, a) => s + a.priceAtBooking, 0);
-
   const todayInstallments = await prisma.installment.findMany({
     where: {
       userPackage: { salonId },
       paidAt: { gte: today, lt: tomorrow },
     },
+    include: {
+      userPackage: {
+        include: {
+          customer: true,
+        },
+      },
+    },
   });
+
+  const standardRevenue = todayAppointments
+    .filter((a) => a.status === "COMPLETED" && !a.userPackageId)
+    .reduce((s, a) => s + a.priceAtBooking, 0);
+
   const installmentRevenue = todayInstallments.reduce((s, inst) => s + inst.amount, 0);
 
   const todayRevenue = standardRevenue + installmentRevenue;
+
+  const appointmentItems = todayAppointments
+    .filter((a) => a.status === "COMPLETED" && !a.userPackageId)
+    .map((a) => ({
+      type: "appointment",
+      customerName: a.customer.name,
+      itemName: a.service.name,
+      amount: a.priceAtBooking,
+      time: a.startTime.toISOString(),
+      note: null,
+    }));
+
+  const installmentItems = todayInstallments.map((inst) => ({
+    type: "installment",
+    customerName: inst.userPackage.customer.name,
+    itemName: inst.userPackage.name,
+    amount: inst.amount,
+    time: inst.paidAt.toISOString(),
+    note: inst.note,
+  }));
+
+  const revenueBreakdown = [...appointmentItems, ...installmentItems].sort(
+    (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+  );
 
   return (
     <DashboardClient
@@ -71,6 +103,7 @@ export default async function DashboardPage() {
       staffCount={staff}
       username={username || ""}
       salon={salon}
+      revenueBreakdown={revenueBreakdown}
     />
   );
 }

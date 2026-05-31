@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/require-auth";
 import { parseMoney, parseRequiredDate } from "@/lib/api-validation";
 import { getTranslations } from "@/lib/get-translations";
+import { revalidatePath } from "next/cache";
 
 export async function POST(
   req: NextRequest,
@@ -183,6 +184,10 @@ export async function POST(
 
       return appt;
     });
+
+    revalidatePath("/appointments");
+    revalidatePath("/dashboard");
+    revalidatePath("/mobile/appointments");
 
     return NextResponse.json(appointment, { status: 201 });
   } catch (err) {
