@@ -39,6 +39,7 @@
     "greeting_afternoon": "مساء الخير،",
     "greeting_evening": "مساء الخير،",
     "todayRevenue": "إيرادات اليوم",
+    "revenueBreakdown": "تفاصيل الإيرادات",
     "appointments": "مواعيد",
     "upcoming": "القادمة",
     "scheduledFromNow": "مجدولة من الآن",
@@ -172,6 +173,11 @@
     "advancePaymentForNextSession": "دفع مقدم للجلسة التالية"
   },
   "appointmentForm": {
+    "successScheduled": "✓ تم الجدولة بنجاح!",
+    "bookingType": "نوع الحجز",
+    "normalAppointment": "موعد عادي",
+    "packageAppointment": "جلسة باقة",
+    "selectActivePackage": "اختر باقة نشطة",
     "title": "موعد جديد",
     "subtitle": "ملء التفاصيل لجدولة موعد جديد",
     "back": "→ العودة للمواعيد",

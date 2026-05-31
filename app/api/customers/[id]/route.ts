@@ -4,7 +4,7 @@ import { requireApiSession } from "@/lib/require-auth";
 import { getTranslations } from "@/lib/get-translations";
 
 export async function GET(
-  _: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireApiSession();
@@ -12,15 +12,19 @@ export async function GET(
   const { salonId } = auth.session;
   try {
     const { id } = await params;
+    const { searchParams } = new URL(req.url);
+    const excludeAppointments = searchParams.get("excludeAppointments") === "true";
     const t = await getTranslations();
 
     const customer = await prisma.customer.findFirst({
       where: { id, salonId },
       include: {
-        appointments: {
-          include: { service: true, staff: true, userPackage: true },
-          orderBy: { startTime: "desc" },
-        },
+        ...(excludeAppointments ? {} : {
+          appointments: {
+            include: { service: true, staff: true, userPackage: true },
+            orderBy: { startTime: "desc" },
+          },
+        }),
         packages: {
           include: {
             service: true, // now included so "Schedule Next Session" knows the service

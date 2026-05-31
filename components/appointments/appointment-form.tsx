@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useLang, CurrencySymbol, Price } from "@/components/providers/language-provider";
+import { localizePackageName, localizeServiceName } from "@/lib/package-utils";
 
 type Service = { id: string; name: string; price: number; duration: number };
 type Staff = { id: string; name: string; role: string };
@@ -29,8 +30,15 @@ const TIME_SLOTS = [
 export function AppointmentForm({ services, staff }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const { t, mounted } = useLang();
+
+  // ── Package booking state ──────────────────────────────────────
+  const [customerDetails, setCustomerDetails] = useState<any | null>(null);
+  const [fetchingCustomerDetails, setFetchingCustomerDetails] = useState(false);
+  const [bookingType, setBookingType] = useState<"normal" | "package">("normal");
+  const [selectedPackageId, setSelectedPackageId] = useState<string>("");
 
   // ── Customer state ──────────────────────────────────────────────
   const [customerMode, setCustomerMode] = useState<"search" | "new">("search");
@@ -44,24 +52,44 @@ export function AppointmentForm({ services, staff }: Props) {
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
-  const [existingPhones, setExistingPhones] = useState<string[]>([]);
+  const [phoneExists, setPhoneExists] = useState(false);
+  const [checkingPhone, setCheckingPhone] = useState(false);
 
   useEffect(() => {
-    async function loadPhones() {
+    if (newPhone.length !== 11) {
+      setPhoneExists(false);
+      setPhoneError("");
+      return;
+    }
+
+    let active = true;
+    async function checkPhoneUnique() {
+      setCheckingPhone(true);
       try {
-        const res = await fetch("/api/customers");
-        if (res.ok) {
+        const res = await fetch(`/api/customers?q=${newPhone}`);
+        if (res.ok && active) {
           const data = await res.json();
-          if (Array.isArray(data)) {
-            setExistingPhones(data.map((c: any) => c.phone));
+          const match = Array.isArray(data) && data.some((c: any) => c.phone === newPhone);
+          if (match) {
+            setPhoneExists(true);
+            setPhoneError(t.common.phoneExists ?? "Phone number is already registered");
+          } else {
+            setPhoneExists(false);
+            setPhoneError("");
           }
         }
       } catch (err) {
-        console.error("Failed to load customer phone numbers:", err);
+        console.error("Failed to check phone number uniqueness:", err);
+      } finally {
+        if (active) setCheckingPhone(false);
       }
     }
-    loadPhones();
-  }, []);
+
+    checkPhoneUnique();
+    return () => {
+      active = false;
+    };
+  }, [newPhone, t.common.phoneExists]);
 
   // ── Service / booking state ─────────────────────────────────────
   const [serviceId, setServiceId] = useState(services[0]?.id || "");
@@ -149,6 +177,60 @@ export function AppointmentForm({ services, staff }: Props) {
     }, 300);
   }, [searchQuery]);
 
+  // Fetch full customer details when selectedCustomer is chosen
+  useEffect(() => {
+    if (!selectedCustomer) {
+      setCustomerDetails(null);
+      setBookingType("normal");
+      setSelectedPackageId("");
+      return;
+    }
+
+    const customerId = selectedCustomer.id;
+    let active = true;
+    async function fetchCustomerDetails() {
+      setFetchingCustomerDetails(true);
+      try {
+        const res = await fetch(`/api/customers/${customerId}?excludeAppointments=true`);
+        if (res.ok && active) {
+          const data = await res.json();
+          setCustomerDetails(data);
+          
+          const activePkgs = data.packages?.filter((p: any) => p.remainingSessions > 0) || [];
+          if (activePkgs.length > 0) {
+            setBookingType("package");
+            setSelectedPackageId(activePkgs[0].id);
+            const bal = Math.max(0, activePkgs[0].totalPrice - activePkgs[0].paidAmount);
+            setInstallmentAmount(activePkgs[0].remainingSessions === 1 ? bal.toString() : "");
+          } else {
+            setBookingType("normal");
+            setSelectedPackageId("");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch customer details:", err);
+      } finally {
+        if (active) setFetchingCustomerDetails(false);
+      }
+    }
+    fetchCustomerDetails();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedCustomer]);
+
+  // Lock service when package booking is selected
+  useEffect(() => {
+    if (bookingType === "package" && customerDetails) {
+      const activePkgs = customerDetails.packages?.filter((p: any) => p.remainingSessions > 0) || [];
+      const selectedPkg = activePkgs.find((p: any) => p.id === selectedPackageId);
+      if (selectedPkg?.serviceId) {
+        setServiceId(selectedPkg.serviceId);
+      }
+    }
+  }, [bookingType, selectedPackageId, customerDetails]);
+
   // ── Phone validation helpers ────────────────────────────────────
   function handlePhoneChange(value: string) {
     const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -161,27 +243,14 @@ export function AppointmentForm({ services, staff }: Props) {
       setPhoneError(t.appointmentForm.errors.phoneMustStart);
       return;
     }
-
-    const hasMatchingPrefix = existingPhones.some((phone) => phone.startsWith(digits));
-    if (digits.length < 11) {
-      setPhoneError(""); // Clear any blocking errors while typing
-    } else {
-      // Exactly 11 digits
-      const isExactMatch = existingPhones.some((phone) => phone === digits);
-      if (isExactMatch) {
-        setPhoneError(t.common.phoneExists ?? "Phone number is already registered");
-      } else {
-        setPhoneError("");
-      }
-    }
+    setPhoneError("");
   }
 
   function validatePhone(): boolean {
     if (newPhone.length === 0) { setPhoneError(t.appointmentForm.errors.phoneRequired); return false; }
     if (!newPhone.startsWith("05")) { setPhoneError(t.appointmentForm.errors.phoneMustStart); return false; }
     if (newPhone.length !== 11) { setPhoneError(t.appointmentForm.errors.PhoneTooShort); return false; }
-    const isExactMatch = existingPhones.some((phone) => phone === newPhone);
-    if (isExactMatch) {
+    if (phoneExists) {
       setPhoneError(t.common.phoneExists ?? "Phone number is already registered");
       return false;
     }
@@ -224,6 +293,83 @@ export function AppointmentForm({ services, staff }: Props) {
       }
     }
 
+    if (bookingType === "package") {
+      if (!selectedPackageId) {
+        setError(t.appointmentForm.errors.failed ?? "Please select a package");
+        return;
+      }
+      const activePkgs = customerDetails?.packages?.filter((p: any) => p.remainingSessions > 0) || [];
+      const selectedPkg = activePkgs.find((p: any) => p.id === selectedPackageId);
+      if (!selectedPkg) {
+        setError(t.appointmentForm.errors.failed ?? "Package not found");
+        return;
+      }
+      if (!staffId) {
+        setError(t.appointmentForm.errors.staffRequired);
+        return;
+      }
+      if (!time) {
+        setError(t.appointmentForm.errors.timeRequired ?? "Please select a time slot");
+        return;
+      }
+
+      const payment = installmentAmount !== "" ? Number(installmentAmount) : 0;
+      if (Number.isNaN(payment) || payment < 0) {
+        setError(t.customers.invalidPaymentAmount ?? "Invalid payment amount");
+        return;
+      }
+
+      const remainingBalance = Math.max(0, selectedPkg.totalPrice - selectedPkg.paidAmount);
+      if (payment > remainingBalance) {
+        setError(
+          (t.customers.paymentCannotExceed ?? "Payment cannot exceed {amount}").replace(
+            "{amount}",
+            remainingBalance.toFixed(2)
+          )
+        );
+        return;
+      }
+
+      if (selectedPkg.remainingSessions === 1 && Math.abs(payment - remainingBalance) > 0.009) {
+        setError(
+          (t.customers.finalSessionMustMatch ?? "Final session payment must equal {amount}").replace(
+            "{amount}",
+            remainingBalance.toFixed(2)
+          )
+        );
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const startTime = new Date(`${date}T${time}:00`);
+        const res = await fetch(`/api/packages/${selectedPackageId}/next-session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            startTime: startTime.toISOString(),
+            staffId,
+            installmentAmount: payment,
+          }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Failed to create appointment");
+        }
+
+        setSuccess(true);
+        setTimeout(() => {
+          router.push("/appointments");
+          router.refresh();
+        }, 1200);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to create appointment");
+        setLoading(false);
+      }
+      return;
+    }
+
     if (!resolvedCustomerId) { setError(t.appointmentForm.errors.customerRequired); return; }
     if (!serviceId) { setError(t.appointmentForm.errors.serviceRequired); return; }
     if (!staffId) { setError(t.appointmentForm.errors.staffRequired); return; }
@@ -251,11 +397,13 @@ export function AppointmentForm({ services, staff }: Props) {
         throw new Error(data.error || "Failed to create appointment");
       }
 
-      router.push("/appointments");
-      router.refresh();
+      setSuccess(true);
+      setTimeout(() => {
+        router.push("/appointments");
+        router.refresh();
+      }, 1200);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create appointment");
-    } finally {
       setLoading(false);
     }
   }
@@ -271,7 +419,20 @@ export function AppointmentForm({ services, staff }: Props) {
   }
 
   return (
-    <div className="admin-page" style={{ padding: "32px 36px", maxWidth: 680 }}>
+    <div className="admin-page" style={{ padding: "32px 36px", maxWidth: 1100 }}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .appointment-form-grid-container {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 20px;
+        }
+        @media (min-width: 1024px) {
+          .appointment-form-grid-container {
+            grid-template-columns: 1fr 1.1fr;
+            align-items: start;
+          }
+        }
+      ` }} />
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <Link
@@ -289,7 +450,9 @@ export function AppointmentForm({ services, staff }: Props) {
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ display: "grid", gap: 20 }}>
+        <div className="appointment-form-grid-container">
+          {/* Left Column */}
+          <div style={{ display: "grid", gap: 20 }}>
 
           {/* ── Customer Section ───────────────────────────────── */}
           <section style={sectionStyle}>
@@ -326,28 +489,150 @@ export function AppointmentForm({ services, staff }: Props) {
             {customerMode === "search" && (
               <div>
                 {selectedCustomer ? (
-                  /* Selected customer chip */
-                  <div style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "12px 14px", border: "2px solid var(--primary)",
-                    borderRadius: 10, background: "var(--primary-light)",
-                  }}>
-                    <div>
-                      <div style={{ fontWeight: 500, fontSize: 14, color: "var(--primary)" }}>
-                        {selectedCustomer.name}
+                  <>
+                    {/* Selected customer chip */}
+                    <div style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "12px 14px", border: "2px solid var(--primary)",
+                      borderRadius: 10, background: "var(--primary-light)",
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: 500, fontSize: 14, color: "var(--primary)" }}>
+                          {selectedCustomer.name}
+                        </div>
+                        <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+                          {selectedCustomer.phone}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-                        {selectedCustomer.phone}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCustomer(null)}
+                        style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}
+                      >
+                        {t.appointmentForm.change}
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedCustomer(null)}
-                      style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}
-                    >
-                      {t.appointmentForm.change}
-                    </button>
-                  </div>
+
+                    {/* Booking Type selection */}
+                    {fetchingCustomerDetails ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                        <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+                          {t.common.searching ?? "Loading customer packages..."}
+                        </span>
+                      </div>
+                    ) : (
+                      customerDetails && (() => {
+                        const activePkgs = customerDetails.packages?.filter((p: any) => p.remainingSessions > 0) || [];
+                        if (activePkgs.length === 0) return null;
+
+                        return (
+                          <div style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
+                            <label style={labelStyle}>{t.appointmentForm.bookingType ?? "BOOKING TYPE"}</label>
+                            <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setBookingType("normal");
+                                  setInstallmentAmount("");
+                                }}
+                                style={{
+                                  ...toggleBtnStyle,
+                                  flex: 1,
+                                  justifyContent: "center",
+                                  background: bookingType === "normal" ? "var(--primary)" : "var(--muted)",
+                                  color: bookingType === "normal" ? "white" : "var(--foreground)",
+                                }}
+                              >
+                                {t.appointmentForm.normalAppointment ?? "Normal Appointment"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setBookingType("package");
+                                  // Prefill installment if it is the first package's final session
+                                  const firstPkg = activePkgs[0];
+                                  if (firstPkg) {
+                                    setSelectedPackageId(firstPkg.id);
+                                    const bal = Math.max(0, firstPkg.totalPrice - firstPkg.paidAmount);
+                                    setInstallmentAmount(firstPkg.remainingSessions === 1 ? bal.toString() : "");
+                                  }
+                                }}
+                                style={{
+                                  ...toggleBtnStyle,
+                                  flex: 1,
+                                  justifyContent: "center",
+                                  background: bookingType === "package" ? "var(--primary)" : "var(--muted)",
+                                  color: bookingType === "package" ? "white" : "var(--foreground)",
+                                }}
+                              >
+                                <Package size={14} style={{ marginRight: 4 }} />
+                                {t.appointmentForm.packageAppointment ?? "Package Session"}
+                              </button>
+                            </div>
+
+                            {bookingType === "package" && (
+                              <div>
+                                <label style={labelStyle}>{t.appointmentForm.selectActivePackage ?? "SELECT ACTIVE PACKAGE"}</label>
+                                <div style={{ display: "grid", gap: 10 }}>
+                                  {activePkgs.map((pkg: any) => {
+                                    const isSelected = selectedPackageId === pkg.id;
+                                    const bal = Math.max(0, pkg.totalPrice - pkg.paidAmount);
+                                    return (
+                                      <button
+                                        key={pkg.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedPackageId(pkg.id);
+                                          setInstallmentAmount(pkg.remainingSessions === 1 ? bal.toString() : "");
+                                        }}
+                                        style={{
+                                          display: "flex",
+                                          flexDirection: "column",
+                                          width: "100%",
+                                          padding: "12px 14px",
+                                          border: `2px solid ${isSelected ? "var(--primary)" : "var(--border)"}`,
+                                          borderRadius: 10,
+                                          background: isSelected ? "var(--primary-light)" : "var(--card)",
+                                          cursor: "pointer",
+                                          textAlign: "left",
+                                          transition: "all 0.15s ease",
+                                        }}
+                                      >
+                                        <div style={{
+                                          fontWeight: 500,
+                                          fontSize: 13.5,
+                                          color: isSelected ? "var(--primary)" : "var(--foreground)",
+                                          marginBottom: 4,
+                                        }}>
+                                          {localizePackageName(pkg.name, t)}
+                                        </div>
+                                        <div style={{
+                                          fontSize: 12,
+                                          color: "var(--muted-foreground)",
+                                          display: "flex",
+                                          gap: 12,
+                                        }}>
+                                          <span>
+                                            {pkg.remainingSessions} / {pkg.totalSessions} {t.customers.sessionsLeftBadge ?? "left"}
+                                          </span>
+                                          {bal > 0 && (
+                                            <span style={{ color: "#c45c5c" }}>
+                                              {t.appointmentForm.remainingBalance} <Price amount={bal} size={12} />
+                                            </span>
+                                          )}
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()
+                    )}
+                  </>
                 ) : (
                   <div style={{ position: "relative" }}>
                     <input
@@ -424,9 +709,9 @@ export function AppointmentForm({ services, staff }: Props) {
                         if (newPhone.length === 0) return "var(--border)";
                         if (!newPhone.startsWith("05")) return "#c45c5c";
 
-                        const hasMatchingPrefix = existingPhones.some((p) => p.startsWith(newPhone));
                         if (newPhone.length === 11) {
-                          return hasMatchingPrefix ? "#c45c5c" : "#2d7a2d";
+                          if (checkingPhone) return "var(--border)";
+                          return phoneExists ? "#c45c5c" : "#2d7a2d";
                         }
                         return "var(--border)";
                       })(),
@@ -439,9 +724,9 @@ export function AppointmentForm({ services, staff }: Props) {
                         if (newPhone.length === 0) return "var(--muted-foreground)";
                         if (!newPhone.startsWith("05")) return "#c45c5c";
 
-                        const hasMatchingPrefix = existingPhones.some((p) => p.startsWith(newPhone));
                         if (newPhone.length === 11) {
-                          return hasMatchingPrefix ? "#c45c5c" : "#2d7a2d";
+                          if (checkingPhone) return "var(--muted-foreground)";
+                          return phoneExists ? "#c45c5c" : "#2d7a2d";
                         }
                         return "var(--muted-foreground)";
                       })(),
@@ -450,9 +735,9 @@ export function AppointmentForm({ services, staff }: Props) {
                         if (newPhone.length === 0) return t.appointmentForm.phoneNumberRules;
                         if (!newPhone.startsWith("05")) return t.appointmentForm.errors.phoneMustStart;
 
-                        const hasMatchingPrefix = existingPhones.some((p) => p.startsWith(newPhone));
                         if (newPhone.length === 11) {
-                          return hasMatchingPrefix
+                          if (checkingPhone) return t.common.searching ?? "Checking...";
+                          return phoneExists
                             ? (t.common.phoneExists ?? "Phone number is already registered")
                             : t.appointmentForm.availableNumber;
                         }
@@ -472,20 +757,27 @@ export function AppointmentForm({ services, staff }: Props) {
           <section style={sectionStyle}>
             <h2 style={sectionTitleStyle}>
               <CurrencySymbol size={15} style={{ color: "var(--primary)" }} /> {t.appointmentForm.service}
+              {bookingType === "package" && (
+                <span style={{ fontSize: 11, fontWeight: 500, color: "var(--primary)", background: "var(--primary-light)", padding: "2px 8px", borderRadius: 12, marginLeft: "auto" }}>
+                  {t.appointmentForm.package ?? "Package"}
+                </span>
+              )}
             </h2>
             <div className="admin-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {services.map((svc) => (
                 <button
                   key={svc.id}
                   type="button"
+                  disabled={bookingType === "package"}
                   onClick={() => selectService(svc.id)}
                   style={{
                     padding: "14px 16px",
                     border: `2px solid ${serviceId === svc.id ? "var(--primary)" : "var(--border)"}`,
                     borderRadius: 10,
                     background: serviceId === svc.id ? "var(--primary-light)" : "var(--background)",
-                    cursor: "pointer",
+                    cursor: bookingType === "package" ? "not-allowed" : "pointer",
                     textAlign: "left",
+                    opacity: bookingType === "package" && serviceId !== svc.id ? 0.4 : 1,
                   }}
                 >
                   <div style={{ fontWeight: 500, fontSize: 13.5, color: serviceId === svc.id ? "var(--primary)" : "var(--foreground)", marginBottom: 4 }}>
@@ -509,7 +801,7 @@ export function AppointmentForm({ services, staff }: Props) {
           </section>
 
           {/* ── Sessions & Price ───────────────────────────────── */}
-          {selectedService && (
+          {selectedService && bookingType !== "package" && (
             <section style={sectionStyle}>
               <h2 style={sectionTitleStyle}>
                 <Package size={15} color="var(--primary)" /> {t.appointmentForm.packagePricing}
@@ -600,6 +892,83 @@ export function AppointmentForm({ services, staff }: Props) {
               </div>
             </section>
           )}
+
+          {/* ── Package Session Details (only in package booking mode) ───────────────── */}
+          {selectedService && bookingType === "package" && (() => {
+            const activePkgs = customerDetails?.packages?.filter((p: any) => p.remainingSessions > 0) || [];
+            const selectedPkg = activePkgs.find((p: any) => p.id === selectedPackageId);
+            if (!selectedPkg) return null;
+
+            const remainingBalance = Math.max(0, selectedPkg.totalPrice - selectedPkg.paidAmount);
+            const isFinalSession = selectedPkg.remainingSessions === 1;
+
+            return (
+              <section style={sectionStyle}>
+                <h2 style={sectionTitleStyle}>
+                  <Package size={15} color="var(--primary)" /> {t.appointmentForm.packagePricing}
+                </h2>
+                <div style={{ display: "grid", gap: 18 }}>
+                  {/* Session Info */}
+                  <div>
+                    <label style={labelStyle}>{t.appointmentForm.appNumber}</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <span style={{ fontSize: 16, fontWeight: 500 }}>
+                        {t.customers.sessionsLeftSummary
+                          .replace("{remaining}", String(selectedPkg.remainingSessions))
+                          .replace("{total}", String(selectedPkg.totalSessions))}
+                      </span>
+                      <span style={{
+                        fontSize: 12, color: "var(--primary)", background: "var(--primary-light)",
+                        padding: "3px 10px", borderRadius: 20, fontWeight: 500,
+                      }}>
+                        {isFinalSession ? (t.customers.finalSessionPaymentNote || "Final Session") : `${t.appointmentForm.package ?? "Package"} Session`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Installment payment if there is remaining debt */}
+                  {remainingBalance > 0 ? (
+                    <div>
+                      <label style={labelStyle}>
+                        {t.customers.paymentNow ?? "Payment Now (optional)"} (<CurrencySymbol size={13} />)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        max={remainingBalance}
+                        value={installmentAmount}
+                        onChange={(e) => {
+                          if (!isFinalSession) {
+                            setInstallmentAmount(e.target.value);
+                          }
+                        }}
+                        disabled={isFinalSession}
+                        placeholder="0"
+                        style={inputStyle}
+                      />
+                      <div style={{ marginTop: 6, fontSize: 12.5, color: "var(--muted-foreground)" }}>
+                        {isFinalSession
+                          ? `${t.customers.finalSessionPaymentNote ?? "Final session payment is fixed to"}: `
+                          : `${t.customers.maximumPaymentNote ?? "Maximum payment is"}: `}
+                        <Price amount={remainingBalance} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <span style={{ fontSize: 13, color: "#2d7a2d", fontWeight: 500 }}>
+                        ✓ {t.appointments.fullyPaid ?? "Fully Paid"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </section>
+            );
+          })()}
+          </div>
+
+          {/* Right Column */}
+          <div style={{ display: "grid", gap: 20 }}>
 
           {/* ── Staff & Time ───────────────────────────────────── */}
           <section style={sectionStyle}>
@@ -716,10 +1085,14 @@ export function AppointmentForm({ services, staff }: Props) {
               alignItems: "center",
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                <strong>{selectedService.name}</strong>
+                <strong>{localizeServiceName(selectedService.name, t)}</strong>
                 <span style={{ color: "var(--primary)", opacity: 0.5 }}>·</span>
                 <span>
-                  {isPackage ? `${sessions} ${t.appointmentForm.packages}` : `${selectedService.duration} ${t.services.min}`}
+                  {bookingType === "package"
+                    ? (t.appointmentForm.package ?? "Package")
+                    : isPackage
+                    ? `${sessions} ${t.appointmentForm.packages}`
+                    : `${selectedService.duration} ${t.services.min}`}
                 </span>
                 {date && time && (() => {
                   const d = new Date(`${date}T${time}:00`);
@@ -739,11 +1112,24 @@ export function AppointmentForm({ services, staff }: Props) {
                 })()}
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontWeight: 600, fontSize: 16 }}><Price amount={totalPrice} size={16} /></div>
-                {isPackage && installmentAmount !== "" && (
-                  <div style={{ fontSize: 11, opacity: 0.8 }}>
-                    <Price amount={Number(installmentAmount)} /> {t.appointmentForm.paidNow}
-                  </div>
+                {bookingType === "package" ? (
+                  <>
+                    <div style={{ fontWeight: 600, fontSize: 16 }}>
+                      <Price amount={installmentAmount !== "" ? Number(installmentAmount) : 0} size={16} />
+                    </div>
+                    <div style={{ fontSize: 11, opacity: 0.8 }}>
+                      {t.appointmentForm.paidNow ?? "Paid now"}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontWeight: 600, fontSize: 16 }}><Price amount={totalPrice} size={16} /></div>
+                    {isPackage && installmentAmount !== "" && (
+                      <div style={{ fontSize: 11, opacity: 0.8 }}>
+                        <Price amount={Number(installmentAmount)} /> {t.appointmentForm.paidNow}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -759,26 +1145,65 @@ export function AppointmentForm({ services, staff }: Props) {
           <div style={{ display: "flex", gap: 10 }}>
             <Link
               href="/appointments"
-              style={{ ...btnStyle, background: "var(--muted)", color: "var(--foreground)", textDecoration: "none", textAlign: "center" }}
+              style={{
+                ...btnStyle,
+                background: "var(--muted)",
+                color: "var(--foreground)",
+                textDecoration: "none",
+                textAlign: "center",
+                padding: "9px 20px",
+                fontSize: 13,
+                height: 38,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxSizing: "border-box",
+                transition: "all 0.2s ease",
+              }}
             >
               {t.common.cancel}
             </Link>
             <button
               type="submit"
-              disabled={loading || !services.length || !staff.length || (customerMode === "new" && !!phoneError)}
+              disabled={loading || success || !services.length || !staff.length || (customerMode === "new" && !!phoneError)}
               style={{
                 ...btnStyle,
-                background: "var(--primary)",
+                background: success ? "#2d7a2d" : "var(--primary)",
                 color: "white",
                 flex: 1,
                 opacity: loading ? 0.7 : 1,
-                cursor: loading ? "not-allowed" : "pointer",
+                cursor: (loading || success) ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                transition: "all 0.2s ease",
+                height: 38,
+                boxSizing: "border-box",
+                padding: "9px 20px",
+                fontSize: 13,
               }}
             >
-              {loading ? t.appointmentForm.scheduling : isPackage ? t.appointmentForm.createPackageAndSchedule : t.appointmentForm.schedule}
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
+                  <span>{t.appointmentForm.scheduling}</span>
+                </>
+              ) : success ? (
+                <span>{t.appointmentForm.successScheduled ?? "✓ Scheduled successfully!"}</span>
+              ) : (
+                <span>
+                  {bookingType === "package"
+                    ? t.appointmentForm.schedule
+                    : isPackage
+                    ? t.appointmentForm.createPackageAndSchedule
+                    : t.appointmentForm.schedule}
+                </span>
+              )}
             </button>
           </div>
 
+          </div>
         </div>
       </form>
     </div>

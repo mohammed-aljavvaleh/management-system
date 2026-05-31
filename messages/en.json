@@ -39,6 +39,7 @@
     "greeting_afternoon": "Good afternoon,",
     "greeting_evening": "Good evening",
     "todayRevenue": "Today's Revenue",
+    "revenueBreakdown": "Revenue Breakdown",
     "appointments": "appointments",
     "upcoming": "Upcoming",
     "scheduledFromNow": "scheduled from now",
@@ -172,6 +173,11 @@
     "advancePaymentForNextSession": "Advance payment for next session"
   },
   "appointmentForm": {
+    "successScheduled": "✓ Scheduled successfully!",
+    "bookingType": "Booking Type",
+    "normalAppointment": "Normal Appointment",
+    "packageAppointment": "Package Session",
+    "selectActivePackage": "Select Active Package",
     "title": "New Appointment",
     "subtitle": "Fill in the details to schedule a new appointment",
     "back": "← Back to Appointments",

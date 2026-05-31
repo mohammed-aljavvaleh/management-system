@@ -38,11 +38,12 @@ export function ShellClient({ children }: { children: React.ReactNode }) {
       <style>{`
         .mobile-topbar {
           display: none;
-          height: 56px;
+          height: 30px;
           background: var(--card);
           border-bottom: 1px solid var(--border);
           align-items: center;
-          justify-content: space-between;
+          justify-content: flex-start;
+          gap: 12px;
           padding: 0 16px;
           flex-shrink: 0;
         }
@@ -65,12 +66,6 @@ export function ShellClient({ children }: { children: React.ReactNode }) {
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, height: "100%" }}>
           {/* Mobile topbar */}
           <header className="mobile-topbar">
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <span style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 500, letterSpacing: "0.02em" }}>
-                {salonName ?? "\u00A0"}
-              </span>
-            </div>
-
             <button
               onClick={() => setIsOpen((v) => !v)}
               style={{

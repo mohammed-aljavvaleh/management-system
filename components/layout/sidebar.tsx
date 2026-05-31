@@ -62,9 +62,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   ];
 
   async function handleLogout() {
-  await fetch("/api/auth/logout", { method: "POST" });
-  window.location.href = "/login";
-}
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/login";
+  }
 
   return (
     <>
@@ -118,12 +118,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           onClick={onClose}
           style={{
             background: "none", border: "none", cursor: "pointer",
-            color: "var(--muted-foreground)", padding: 4, borderRadius: 6,
+            color: "var(--muted-foreground)", padding: 8, borderRadius: 6,
             alignItems: "center", justifyContent: "center",
           }}
           aria-label="Close menu"
         >
-          <X size={18} />
+          <X size={25} />
         </button>
 
         {/* Logo */}
@@ -180,7 +180,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           display: "flex", flexDirection: "column", gap: 10,
         }}>
           <LanguageToggle />
-            <button
+          <button
             onClick={handleLogout}
             style={{
               display: "flex", alignItems: "center", gap: 8,

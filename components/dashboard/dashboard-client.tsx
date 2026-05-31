@@ -9,6 +9,7 @@ import { ar } from "date-fns/locale/ar";
 import { tr } from "date-fns/locale/tr";
 import { enUS } from "date-fns/locale/en-US";
 import { Avatar } from "@/components/ui/avatar";
+import { localizeInstallmentNote, localizeServiceName } from "@/lib/package-utils";
 
 type Appointment = {
   id: string;
@@ -20,6 +21,15 @@ type Appointment = {
   staff: { name: string };
 };
 
+type RevenueBreakdownItem = {
+  type: string;
+  customerName: string;
+  itemName: string;
+  amount: number;
+  time: string;
+  note: string | null;
+};
+
 type Props = {
   todayAppointments: Appointment[];
   todayRevenue: number;
@@ -28,6 +38,7 @@ type Props = {
   staffCount: number;
   username: string;
   salon: { id: string; name: string; currency: string; openingHour: string; closingHour: string } | null;
+  revenueBreakdown?: RevenueBreakdownItem[];
 };
 
 export function DashboardClient({
@@ -38,6 +49,7 @@ export function DashboardClient({
   staffCount,
   username,
   salon: initialSalon,
+  revenueBreakdown = [],
 }: Props) {
   const { t, lang, currency, mounted } = useLang();
   const [adminName] = useState<string | null>(
@@ -51,6 +63,7 @@ export function DashboardClient({
   const [updating, setUpdating] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [showBreakdown, setShowBreakdown] = useState(false);
 
   async function handleSaveSettings() {
     if (openingHour >= closingHour) {
@@ -149,7 +162,7 @@ export function DashboardClient({
             className="animate-fade-in admin-stat-card"
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-              <div 
+              <div
                 className="admin-stat-icon-box"
                 style={{ background: stat.color + "18" }}
               >
@@ -166,18 +179,41 @@ export function DashboardClient({
             <div className="admin-stat-sub" style={{ color: stat.color }}>
               {stat.sub}
             </div>
+            {stat.label === t.dashboard.todayRevenue && (
+              <button
+                type="button"
+                onClick={() => setShowBreakdown(true)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--primary)",
+                  fontSize: "12px",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  padding: 0,
+                  marginTop: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  textDecoration: "underline",
+                  alignSelf: "flex-start",
+                }}
+              >
+                {t.dashboard.revenueBreakdown ?? "Revenue Breakdown"}
+              </button>
+            )}
           </div>
         ))}
       </div>
 
       {/* Two-Column Responsive Layout Grid */}
       <div className="dashboard-grid-container">
-        
+
         {/* Left Column: Today's Schedule & Status Row */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          
+        <div className="dashboard-left-col" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+
           {/* Status row */}
-          <div className="admin-status-row" style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <div className="admin-status-row dashboard-status-row" style={{ display: "flex", gap: 12, alignItems: "center" }}>
             {[
               { label: t.dashboard.scheduled, value: scheduled, color: "#1a6fa0", bg: "#e8f4fd" },
               { label: t.dashboard.completed, value: completed, color: "#2d7a2d", bg: "#e8f5e8" },
@@ -208,7 +244,7 @@ export function DashboardClient({
           </div>
 
           {/* Today's Appointments Table */}
-          <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+          <div className="dashboard-schedule-card" style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
             <div style={{
               padding: "18px 22px", borderBottom: "1px solid var(--border)",
               display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -261,8 +297,8 @@ export function DashboardClient({
                     <div className="dashboard-appt-status">
                       <span className={`status-${appt.status.toLowerCase()}`}>
                         {appt.status === "SCHEDULED" ? t.appointments.statuses.scheduled
-                        : appt.status === "COMPLETED" ? t.appointments.statuses.completed
-                        : t.appointments.statuses.cancelled}
+                          : appt.status === "COMPLETED" ? t.appointments.statuses.completed
+                            : t.appointments.statuses.cancelled}
                       </span>
                     </div>
                   </div>
@@ -273,25 +309,91 @@ export function DashboardClient({
 
         </div>
 
-        {/* Right Column: Working Hours Card & Today's Summary Insights */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          
+        {/* Right Column: Today's Summary Insights & Working Hours Card */}
+        <div className="dashboard-right-col" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+
+          {/* Today's Summary Insight Card */}
+          <div
+            className="animate-fade-in dashboard-summary-card"
+            style={{
+              background: "var(--card)",
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              padding: "20px 24px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: 8,
+                background: "rgba(201, 149, 107, 0.1)",
+                display: "flex", alignItems: "center", justifyContent: "center"
+              }}>
+                <Award size={16} color="var(--primary)" />
+              </div>
+              <h2 style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 500, margin: 0 }}>
+                {lang === "ar" ? "ملخص اليوم" : (lang === "tr" ? "Günün Özeti" : "Today's Summary")}
+              </h2>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 500, marginBottom: 6 }}>
+                  <span style={{ color: "var(--muted-foreground)" }}>
+                    {lang === "ar" ? "معدل الإنجاز" : (lang === "tr" ? "Tamamlanma Oranı" : "Completion Rate")}
+                  </span>
+                  <span style={{ color: "var(--primary)" }}>
+                    {(() => {
+                      const activeCount = todayAppointments.length - cancelled;
+                      const rate = activeCount > 0 ? Math.round((completed / activeCount) * 100) : 0;
+                      return rate;
+                    })()}%
+                  </span>
+                </div>
+                <div style={{ height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${(() => {
+                      const activeCount = todayAppointments.length - cancelled;
+                      return activeCount > 0 ? Math.round((completed / activeCount) * 100) : 0;
+                    })()}%`,
+                    background: "var(--primary)",
+                    transition: "width 0.5s ease"
+                  }} />
+                </div>
+              </div>
+
+              <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", lineHeight: 1.5, margin: 0 }}>
+                {(() => {
+                  const activeCount = todayAppointments.length - cancelled;
+                  const rate = activeCount > 0 ? Math.round((completed / activeCount) * 100) : 0;
+                  if (rate === 100 && scheduled === 0 && completed > 0) {
+                    return lang === "ar" ? "عمل رائع! تم إكمال جميع المواعيد اليوم." : (lang === "tr" ? "Harika iş! Bugünün tüm randevuları tamamlandı." : "Great job! All appointments for today have been completed.");
+                  }
+                  if (scheduled > 0) {
+                    return lang === "ar" ? `لديك ${scheduled} موعد قادم مجدول اليوم.` : (lang === "tr" ? `Bugün planlanmış ${scheduled} yaklaşan randevunuz var.` : `You have ${scheduled} upcoming appointment(s) scheduled for today.`);
+                  }
+                  return lang === "ar" ? "لا توجد مواعيد متبقية لليوم." : (lang === "tr" ? "Bugün için başka randevu kalmadı." : "No more appointments left for today.");
+                })()}
+              </p>
+            </div>
+          </div>
+
           {/* Working Hours Settings Card */}
           {salon && (
-            <div 
-              className="animate-fade-in"
-              style={{ 
-                background: "var(--card)", 
-                border: "1px solid var(--border)", 
-                borderRadius: 12, 
+            <div
+              className="animate-fade-in dashboard-hours-card"
+              style={{
+                background: "var(--card)",
+                border: "1px solid var(--border)",
+                borderRadius: 12,
                 padding: "20px 24px"
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ 
-                  width: 32, height: 32, borderRadius: 8, 
-                  background: "rgba(212, 136, 74, 0.1)", 
-                  display: "flex", alignItems: "center", justifyContent: "center" 
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8,
+                  background: "rgba(212, 136, 74, 0.1)",
+                  display: "flex", alignItems: "center", justifyContent: "center"
                 }}>
                   <Clock size={16} color="#d4884a" />
                 </div>
@@ -302,11 +404,11 @@ export function DashboardClient({
                 </div>
               </div>
 
-              <div style={{ 
-                display: "grid", 
-                gridTemplateColumns: "1fr 1fr", 
-                gap: 12, 
-                marginTop: 20, 
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+                marginTop: 20,
               }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <label style={{ fontSize: 12, fontWeight: 500, color: "var(--muted-foreground)" }}>
@@ -379,12 +481,12 @@ export function DashboardClient({
               </button>
 
               {saveError && (
-                <div style={{ 
-                  marginTop: 12, 
-                  padding: "8px 12px", 
-                  background: "#fde8e8", 
-                  borderRadius: 6, 
-                  color: "#a01a1a", 
+                <div style={{
+                  marginTop: 12,
+                  padding: "8px 12px",
+                  background: "#fde8e8",
+                  borderRadius: 6,
+                  color: "#a01a1a",
                   fontSize: 12.5,
                   display: "block",
                   textAlign: "center"
@@ -394,78 +496,124 @@ export function DashboardClient({
               )}
             </div>
           )}
-
-          {/* Today's Summary Insight Card */}
-          {todayAppointments.length > 0 && (
-            <div
-              className="animate-fade-in"
-              style={{
-                background: "var(--card)",
-                border: "1px solid var(--border)",
-                borderRadius: 12,
-                padding: "20px 24px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8,
-                  background: "rgba(201, 149, 107, 0.1)",
-                  display: "flex", alignItems: "center", justifyContent: "center"
-                }}>
-                  <Award size={16} color="var(--primary)" />
-                </div>
-                <h2 style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 500, margin: 0 }}>
-                  {lang === "ar" ? "ملخص اليوم" : (lang === "tr" ? "Günün Özeti" : "Today's Summary")}
-                </h2>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 500, marginBottom: 6 }}>
-                    <span style={{ color: "var(--muted-foreground)" }}>
-                      {lang === "ar" ? "معدل الإنجاز" : (lang === "tr" ? "Tamamlanma Oranı" : "Completion Rate")}
-                    </span>
-                    <span style={{ color: "var(--primary)" }}>
-                      {(() => {
-                        const activeCount = todayAppointments.length - cancelled;
-                        const rate = activeCount > 0 ? Math.round((completed / activeCount) * 100) : 0;
-                        return rate;
-                      })()}%
-                    </span>
-                  </div>
-                  <div style={{ height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
-                    <div style={{ 
-                      height: "100%", 
-                      width: `${(() => {
-                        const activeCount = todayAppointments.length - cancelled;
-                        return activeCount > 0 ? Math.round((completed / activeCount) * 100) : 0;
-                      })()}%`, 
-                      background: "var(--primary)", 
-                      transition: "width 0.5s ease" 
-                    }} />
-                  </div>
-                </div>
-
-                <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", lineHeight: 1.5, margin: 0 }}>
-                  {(() => {
-                    const activeCount = todayAppointments.length - cancelled;
-                    const rate = activeCount > 0 ? Math.round((completed / activeCount) * 100) : 0;
-                    if (rate === 100 && scheduled === 0 && completed > 0) {
-                      return lang === "ar" ? "عمل رائع! تم إكمال جميع المواعيد اليوم." : (lang === "tr" ? "Harika iş! Bugünün tüm randevuları tamamlandı." : "Great job! All appointments for today have been completed.");
-                    }
-                    if (scheduled > 0) {
-                      return lang === "ar" ? `لديك ${scheduled} موعد قادم مجدول اليوم.` : (lang === "tr" ? `Bugün planlanmış ${scheduled} yaklaşan randevunuz var.` : `You have ${scheduled} upcoming appointment(s) scheduled for today.`);
-                    }
-                    return lang === "ar" ? "لا توجد مواعيد متبقية لليوم." : (lang === "tr" ? "Bugün için başka randevu kalmadı." : "No more appointments left for today.");
-                  })()}
-                </p>
-              </div>
-            </div>
-          )}
-
         </div>
 
       </div>
+
+      {showBreakdown && (
+        <div
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+          }}
+          onClick={() => setShowBreakdown(false)}
+        >
+          <div
+            className="admin-modal"
+            style={{
+              background: "var(--card)", border: "1px solid var(--border)",
+              borderRadius: 14, padding: "28px 32px",
+              width: 500, maxWidth: "90vw",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
+              {t.dashboard.revenueBreakdown ?? "Revenue Breakdown"}
+            </h3>
+            <p style={{ fontSize: 13, color: "var(--muted-foreground)", marginBottom: 20 }}>
+              {format(new Date(), "EEEE, d MMMM yyyy", { locale: lang === "ar" ? ar : (lang === "tr" ? tr : enUS) })}
+            </p>
+
+            <div style={{ maxHeight: 300, overflowY: "auto", display: "grid", gap: 12, marginBottom: 24, paddingRight: 4 }}>
+              {revenueBreakdown.length === 0 ? (
+                <div style={{ padding: "24px 0", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13.5 }}>
+                  {lang === "ar" ? "لا توجد إيرادات مسجلة اليوم" : (lang === "tr" ? "Bugün için kaydedilmiş gelir yok." : "No revenue recorded today.")}
+                </div>
+              ) : (
+                revenueBreakdown.map((item, index) => {
+                  const isAppt = item.type === "appointment";
+                  const formattedTime = format(new Date(item.time), "HH:mm");
+
+                  return (
+                    <div
+                      key={index}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "10px 14px",
+                        border: "1px solid var(--border)",
+                        borderRadius: 8,
+                        background: "var(--background)"
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: 13.5, fontWeight: 600 }}>
+                          {item.customerName}
+                        </div>
+                        <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{
+                            padding: "2px 6px",
+                            borderRadius: 4,
+                            fontSize: 10,
+                            fontWeight: 600,
+                            textTransform: "uppercase",
+                            background: isAppt ? "rgba(158, 201, 123, 0.15)" : "rgba(201, 149, 107, 0.15)",
+                            color: isAppt ? "#2d7a2d" : "var(--primary)"
+                          }}>
+                            {isAppt ? (t.appointments.appointment ?? "Appointment") : (t.appointmentForm.package ?? "Package")}
+                          </span>
+                          <span>·</span>
+                          <span>{formattedTime}</span>
+                          <span>·</span>
+                          <span>{isAppt ? localizeServiceName(item.itemName, t) : item.itemName}</span>
+                        </div>
+                        {item.note && (
+                          <div style={{ fontSize: 11, color: "var(--primary)", fontStyle: "italic", marginTop: 4 }}>
+                            {localizeInstallmentNote(item.note, t)}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ fontWeight: 600, fontSize: 14.5 }}>
+                        <Price amount={item.amount} />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border)", paddingTop: 16 }}>
+              <span style={{ fontWeight: 500, fontSize: 14 }}>
+                {t.reports.totalRevenue ?? "Total Revenue"}
+              </span>
+              <span style={{ fontWeight: 700, fontSize: 17, color: "var(--primary)" }}>
+                <Price amount={todayRevenue} size={17} />
+              </span>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
+              <button
+                type="button"
+                onClick={() => setShowBreakdown(false)}
+                style={{
+                  padding: "8px 18px",
+                  borderRadius: 8,
+                  border: "1px solid var(--border)",
+                  background: "transparent",
+                  color: "var(--foreground)",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 500
+                }}
+              >
+                {t.common.cancel ?? "Close"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

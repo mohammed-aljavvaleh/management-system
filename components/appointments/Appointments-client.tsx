@@ -712,9 +712,9 @@ export function AppointmentsClient({
       </div>
 
       {view === "calendar" ? (
-        <div className="admin-calendar-layout" style={{ display: "grid", gridTemplateColumns: "minmax(340px, 1fr) minmax(340px, 480px)", gap: 20 }}>
+        <div className="admin-calendar-layout" style={{ display: "grid", gridTemplateColumns: "minmax(340px, 480px) 1fr", gap: 20 }}>
           {/* Calendar grid */}
-          <div className="admin-calendar-scroll" style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, overflowX: "auto", overflowY: "hidden" }}>
+          <div className="admin-calendar-scroll" style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, overflowX: "auto", overflowY: "hidden", alignSelf: "start" }}>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <h2 style={{ fontFamily: "var(--font-display)", fontSize: 18 }}>
                 {MONTHS[currentMonth.getMonth()]} {currentMonth.getFullYear()}
